@@ -88,7 +88,15 @@ export const getGemstones = asyncHandler(async (req, res, next) => {
   }
 
   if (reqQuery.search) {
-    query.$text = { $search: reqQuery.search };
+    query.$or = [
+      { 'name.english': { $regex: reqQuery.search, $options: 'i' } },
+      { 'name.urdu': { $regex: reqQuery.search, $options: 'i' } },
+      { category: { $regex: reqQuery.search, $options: 'i' } },
+      { description: { $regex: reqQuery.search, $options: 'i' } },
+      { summary: { $regex: reqQuery.search, $options: 'i' } },
+      { uses: { $regex: reqQuery.search, $options: 'i' } },
+      { tags: { $in: [new RegExp(reqQuery.search, 'i')] } }
+    ];
   }
 
   // Create query
@@ -102,8 +110,17 @@ export const getGemstones = asyncHandler(async (req, res, next) => {
 
   // Sort
   if (req.query.sort) {
-    const sortBy = req.query.sort.split(',').join(' ');
-    mongoQuery = mongoQuery.sort(sortBy);
+    const sortValue = req.query.sort;
+    if (sortValue === 'price_asc') {
+      mongoQuery = mongoQuery.sort({ price: 1 });
+    } else if (sortValue === 'price_desc') {
+      mongoQuery = mongoQuery.sort({ price: -1 });
+    } else if (sortValue === 'name') {
+      mongoQuery = mongoQuery.sort({ 'name.english': 1 });
+    } else {
+      const sortBy = req.query.sort.split(',').join(' ');
+      mongoQuery = mongoQuery.sort(sortBy);
+    }
   } else {
     mongoQuery = mongoQuery.sort('-createdAt');
   }
@@ -184,9 +201,16 @@ export const getNewArrivals = asyncHandler(async (req, res, next) => {
 export const getGemstone = asyncHandler(async (req, res, next) => {
   const { identifier } = req.params;
   
+  // Validate identifier shape before looking up
+  const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(identifier);
+  const isValidSlug = /^[a-z0-9]+(-[a-z0-9]+)*$/.test(identifier);
+  if (!isValidObjectId && !isValidSlug) {
+    throw new AppError('Invalid gemstone identifier', 400);
+  }
+
   // Try to find by MongoDB ID first, then by slug
   let gemstone;
-  if (identifier.match(/^[0-9a-fA-F]{24}$/)) {
+  if (isValidObjectId) {
     gemstone = await Gemstone.findById(identifier).populate('addedBy', 'name email');
   } else {
     gemstone = await Gemstone.findOne({ slug: identifier, isActive: true }).populate('addedBy', 'name email');
