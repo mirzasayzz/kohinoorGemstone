@@ -1,80 +1,147 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import OpenAI from 'openai';
 import Gemstone from '../models/Gemstone.js';
-import { getActiveApiKey } from './adminDashboardRoutes.js';
 
 const router = express.Router();
 
-// Detect AI provider from API key
-const detectProvider = (apiKey) => {
-  if (!apiKey) return null;
-  if (apiKey.startsWith('sk-mega-')) return 'megallm';
-  if (apiKey.startsWith('sk-')) return 'openai';
-  return 'gemini'; // Default to Gemini for other keys
-};
+// ============================================
+// MULTI-PROVIDER FALLBACK AI SYSTEM
+// Tier 0a: agentrouter deepseek-v4-flash (primary) — fast, high quality
+// Tier 0b: agentrouter deepseek-v4-pro   (reasoning fallback)
+// Tier 1:  Groq llama-3.3-70b-versatile  — ultra fast, free
+// Tier 2:  Groq llama-3.1-8b-instant     — smaller but reliable
+// Tier 3:  Mistral mistral-small-latest   — good quality
+// Tier 4:  Pollinations                   — no auth, always free
+// Tier 5:  Smart hardcoded fallback       — NEVER fails
+// ============================================
 
-// Get AI client based on provider (async - loads from DB)
-const getAIClient = async () => {
-  const apiKey = await getActiveApiKey();
-  if (!apiKey) {
-    throw new Error('No AI API key configured');
-  }
-  
-  const provider = detectProvider(apiKey);
-  
-  if (provider === 'megallm') {
-    return {
-      provider: 'megallm',
-      client: new OpenAI({
-        baseURL: 'https://ai.megallm.io/v1',
-        apiKey: apiKey
-      }),
-      model: 'openai-gpt-oss-20b'
-    };
-  } else if (provider === 'openai') {
-    return {
-      provider: 'openai',
-      client: new OpenAI({ apiKey }),
-      model: 'gpt-4o-mini'
-    };
-  } else {
-    return {
-      provider: 'gemini',
-      client: new GoogleGenerativeAI(apiKey),
-      model: 'gemini-2.5-flash'
-    };
-  }
-};
+// ============================================
+// TRUE MULTI-TURN AI CALL
+// Sends full messages[] array for real context
+// ============================================
+const callAIMessages = async (messages) => {
+  let lastError = null;
 
-// Unified AI call function
-const callAI = async (prompt) => {
-  const { provider, client, model } = await getAIClient();
-  
-  if (provider === 'megallm' || provider === 'openai') {
-    const response = await client.chat.completions.create({
-      model: model,
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 500,
-      temperature: 0.8
-    });
-    return response.choices[0].message.content;
-  } else {
-    // Gemini
-    const genModel = client.getGenerativeModel({ 
-      model: model,
-      generationConfig: {
-        maxOutputTokens: 500,
-        temperature: 0.8,
-        topP: 0.9,
-        topK: 40
+  // Tier 0a & 0b: agentrouter — deepseek-v4-flash (fast) then deepseek-v4-pro (reasoning)
+  const deepseekKey = process.env.DEEPSEEK_API_KEY;
+  const deepseekBaseUrl = process.env.DEEPSEEK_BASE_URL;
+  if (deepseekKey && deepseekBaseUrl) {
+    const deepseekModels = [
+      { id: 'deepseek/deepseek-v4-flash', label: 'deepseek-v4-flash' },
+      { id: 'deepseek/deepseek-v4-pro',   label: 'deepseek-v4-pro'   }
+    ];
+    for (const { id, label } of deepseekModels) {
+      try {
+        console.log(`[AI] Trying agentrouter/${label}`);
+        const res = await fetch(`${deepseekBaseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${deepseekKey}`
+          },
+          body: JSON.stringify({
+            model: id,
+            messages,
+            max_tokens: 500,
+            temperature: 0.85
+          }),
+          signal: AbortSignal.timeout(10000)
+        });
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content;
+        if (text && text.trim().length > 5) {
+          console.log(`[AI] ✅ agentrouter/${label}`);
+          return text.trim();
+        }
+      } catch (err) {
+        lastError = err;
+        console.warn(`[AI] ❌ agentrouter/${label}:`, err.message);
       }
-    });
-    const result = await genModel.generateContent(prompt);
-    return result.response.text();
+    }
+  } else {
+    console.warn('[AI] DEEPSEEK_API_KEY or DEEPSEEK_BASE_URL not set — skipping agentrouter tier');
   }
+
+  // Tier 1 & 2: Groq — OpenAI-compatible, uses messages[] natively
+  const groqKey = process.env.GROQ_API_KEY || 'REDACTED_GROQ_KEY';
+  const groqModels = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+  for (const model of groqModels) {
+    try {
+      console.log(`[AI] Trying groq/${model}`);
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${groqKey}`
+        },
+        body: JSON.stringify({ model, messages, max_tokens: 500, temperature: 0.85 }),
+        signal: AbortSignal.timeout(8000)
+      });
+      const data = await res.json();
+      const text = data.choices?.[0]?.message?.content;
+      if (text && text.trim().length > 5) {
+        console.log(`[AI] ✅ groq/${model}`);
+        return text.trim();
+      }
+    } catch (err) {
+      lastError = err;
+      console.warn(`[AI] ❌ groq/${model}:`, err.message);
+    }
+  }
+
+  // Tier 3: Mistral — also OpenAI-compatible
+  const mistralKey = process.env.MISTRAL_API_KEY || 'v2SqFAZuImAflsiKwXC6KBsPN1SJoLZS';
+  try {
+    console.log('[AI] Trying mistral');
+    const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${mistralKey}`
+      },
+      body: JSON.stringify({ model: 'mistral-small-latest', messages, max_tokens: 500, temperature: 0.85 }),
+      signal: AbortSignal.timeout(8000)
+    });
+    const data = await res.json();
+    const text = data.choices?.[0]?.message?.content;
+    if (text && text.trim().length > 5) {
+      console.log('[AI] ✅ mistral');
+      return text.trim();
+    }
+  } catch (err) {
+    lastError = err;
+    console.warn('[AI] ❌ mistral:', err.message);
+  }
+
+  // Tier 4: Pollinations — flatten messages to a single prompt string
+  try {
+    console.log('[AI] Trying pollinations');
+    const flatPrompt = messages
+      .map(m => `${m.role === 'system' ? '<<INSTRUCTIONS>>' : m.role === 'user' ? 'User' : 'Kohinoor'}: ${m.content}`)
+      .join('\n') + '\nKohinoor:';
+    const encoded = encodeURIComponent(flatPrompt.slice(-800));
+    const res = await fetch(`https://text.pollinations.ai/${encoded}`, { signal: AbortSignal.timeout(12000) });
+    if (res.ok) {
+      const text = (await res.text()).trim();
+      if (text && text.length > 5) {
+        console.log('[AI] ✅ pollinations');
+        return text;
+      }
+    }
+  } catch (err) {
+    lastError = err;
+    console.warn('[AI] ❌ pollinations:', err.message);
+  }
+
+  console.warn('[AI] All providers failed. Last error:', lastError?.message);
+  return null;
 };
+
+// Stub for backward compat (status endpoint)
+const getAIClient = async () => ({
+  provider: process.env.DEEPSEEK_API_KEY ? 'deepseek' : 'groq',
+  model: process.env.DEEPSEEK_API_KEY ? 'deepseek-v4-flash' : 'llama-3.3-70b-versatile'
+});
 
 // ============================================
 // KOHINOOR AI - HUMAN-LIKE CONVERSATION SYSTEM
@@ -546,115 +613,96 @@ const getMatchingGemstones = async (context) => {
 };
 
 // ============================================
-// BUILD HUMAN-LIKE PROMPT
+// BUILD TRUE MULTI-TURN MESSAGES ARRAY
+// System prompt sets persona + context
+// Full conversation history passed as actual turns
 // ============================================
-const buildConversationalPrompt = (userMessage, conversation, context, gemstones, mood) => {
+const buildMessages = (userMessage, history, context, gemstones, mood) => {
   const userName = context.userName || '';
   const hasGemstones = gemstones && gemstones.length > 0;
-  
-  // Build conversation history string (last 6 messages for context)
-  const recentHistory = conversation.slice(-6).map(msg => 
-    `${msg.role === 'user' ? 'Customer' : 'Kohinoor'}: ${msg.content}`
-  ).join('\n');
-  
-  // Build gemstone suggestions if available
-  let gemstoneInfo = '';
+
+  // ---- SYSTEM PROMPT (persona + live context) ----
+  let systemContent = `You are Kohinoor — a warm, knowledgeable gemstone friend who works at Kohinoor Gemstones in Bareilly, India. You have grown up surrounded by gemstones and genuinely love helping people find the right stone.
+
+YOUR PERSONALITY:
+- Talk like a helpful friend texting — casual, warm, never robotic
+- Short replies (2-4 sentences max). No essays.
+- Use contractions naturally (I'm, you're, that's, it's)
+- Occasional emoji 💎✨ but not every sentence
+- FORBIDDEN phrases: "I understand", "Based on your requirements", "As an AI", "I'd be happy to help", "Certainly!"
+- PREFERRED phrases: "Oh nice!", "Got it!", "So basically...", "Here's the thing...", "Between us..."
+- Ask only ONE follow-up question per reply, not multiple
+- NEVER repeat information you already told in this conversation
+- NEVER give the same opening line twice
+- If they ask something off-topic, gently steer back to gemstones
+- Always reference what they said before — show you remember the conversation
+
+CURRENT MOOD CONTEXT: ${mood.mood} (${mood.intensity} intensity)
+MOOD INSTRUCTION: ${
+  mood.mood === 'excited' ? 'Match their energy! Be enthusiastic.' :
+  mood.mood === 'confused' ? 'Be extra clear and patient. Ask one clarifying question.' :
+  mood.mood === 'worried' ? 'Be reassuring. Give facts to ease concerns.' :
+  mood.mood === 'urgent' ? 'Be efficient. Get to the point quickly but stay warm.' :
+  mood.mood === 'skeptical' ? 'Be honest and factual. No hype. Let quality speak.' :
+  mood.mood === 'grateful' ? 'Accept warmly. Offer to help further.' :
+  'Keep it natural and friendly.'
+}`;
+
+  // Add what we know about this person
+  const knownFacts = [];
+  if (userName) knownFacts.push(`Name: ${userName}`);
+  if (context.zodiac) knownFacts.push(`Zodiac: ${context.zodiac}${context.zodiacFromDob ? ' (from DOB)' : ''}`);
+  if (context.budget) knownFacts.push(`Budget: ${context.budgetDisplay}`);
+  if (context.occasion) knownFacts.push(`Occasion: ${context.occasion}`);
+  if (context.gemstoneType) knownFacts.push(`Interested in: ${context.gemstoneTypeDisplay}`);
+  if (context.purpose) knownFacts.push(`Purpose: ${context.purpose}`);
+  if (context.userPlace) knownFacts.push(`Location: ${context.userPlace}`);
+  if (knownFacts.length > 0) {
+    systemContent += `\n\nWHAT YOU KNOW ABOUT THIS CUSTOMER:\n${knownFacts.join('\n')}`;
+  }
+
+  // Add gemstone knowledge if relevant
+  if (context.gemstoneType && GEMSTONE_KNOWLEDGE[context.gemstoneType]) {
+    const k = GEMSTONE_KNOWLEDGE[context.gemstoneType];
+    systemContent += `\n\nEXPERT KNOWLEDGE (share naturally, not all at once):\n`;
+    if (k.planet) systemContent += `Planet: ${k.planet}\n`;
+    if (k.benefits) systemContent += `Benefits: ${k.benefits.join(', ')}\n`;
+    if (k.bestFor) systemContent += `Best for: ${k.bestFor.join(', ')}\n`;
+    if (k.warning) systemContent += `Important: ${k.warning}\n`;
+    if (k.tip) systemContent += `Pro tip: ${k.tip}\n`;
+    if (k.priceGuide) systemContent += `Price guide: ${k.priceGuide}\n`;
+  }
+
+  // Add matching gemstones context
   if (hasGemstones) {
-    gemstoneInfo = gemstones.map(g => {
-      const price = g.priceRange?.min 
-        ? `₹${g.priceRange.min.toLocaleString('en-IN')} - ₹${(g.priceRange.max || g.priceRange.min * 2).toLocaleString('en-IN')}`
-        : 'Contact for price';
-      return `- ${g.name.english} (${g.category}): ${price} - ${g.summary || 'Beautiful gemstone'}`;
-    }).join('\n');
-  }
-  
-  // Build context summary
-  let contextSummary = '';
-  if (userName) contextSummary += `Customer's name: ${userName}\n`;
-  if (context.userPlace) contextSummary += `From: ${context.userPlace}\n`;
-  if (context.userDob) contextSummary += `Date of Birth: ${context.userDob}\n`;
-  if (context.zodiac) {
-    contextSummary += `Zodiac: ${context.zodiac}${context.zodiacFromDob ? ' (from DOB - use this for accurate astrological suggestions!)' : ''}\n`;
-  }
-  if (context.budget) contextSummary += `Budget: ${context.budgetDisplay}\n`;
-  if (context.occasion) contextSummary += `Occasion: ${context.occasion}\n`;
-  if (context.gemstoneType) contextSummary += `Looking for: ${context.gemstoneTypeDisplay}\n`;
-  if (context.purpose) contextSummary += `Purpose: ${context.purpose}\n`;
-  
-  // Mood-based instructions
-  let moodInstruction = '';
-  switch (mood.mood) {
-    case 'excited':
-      moodInstruction = "The customer is excited! Match their energy with enthusiasm.";
-      break;
-    case 'confused':
-      moodInstruction = "The customer seems confused. Be extra helpful and clear. Ask clarifying questions.";
-      break;
-    case 'worried':
-      moodInstruction = "The customer has concerns. Be reassuring and provide helpful information.";
-      break;
-    case 'urgent':
-      moodInstruction = "The customer is in a hurry. Be efficient but still warm.";
-      break;
-    case 'skeptical':
-      moodInstruction = "The customer seems skeptical. Be honest, provide facts, and don't be pushy.";
-      break;
-    case 'grateful':
-      moodInstruction = "The customer is expressing thanks. Accept graciously and offer continued help.";
-      break;
-    default:
-      moodInstruction = "Keep the conversation natural and friendly.";
+    systemContent += `\n\nMATCHING GEMSTONES IN OUR CATALOG (mention these naturally):\n`;
+    gemstones.forEach(g => {
+      const price = g.priceRange?.min
+        ? `₹${g.priceRange.min.toLocaleString('en-IN')}–₹${(g.priceRange.max || g.priceRange.min * 1.5).toLocaleString('en-IN')}`
+        : 'price on request';
+      systemContent += `• ${g.name.english} (${g.category}) at ${price}: ${g.summary || 'premium quality gemstone'}\n`;
+    });
+    systemContent += `Tell them you found matching options and they can see the cards below! 👇`;
   }
 
-  return `You are Kohinoor - a friendly gemstone expert who chats like a helpful friend, NOT a formal assistant.
+  // ---- BUILD MESSAGES ARRAY ----
+  const messages = [{ role: 'system', content: systemContent }];
 
-WHO YOU ARE:
-${KOHINOOR_PERSONA.background}
+  // Add full conversation history as proper turns (last 10 for context)
+  const recentHistory = history.slice(-10);
+  for (const msg of recentHistory) {
+    // Skip the current user message (we'll add it last)
+    if (msg.role === 'user' && msg.content === userMessage && msg === recentHistory[recentHistory.length - 2]) continue;
+    messages.push({ role: msg.role === 'assistant' ? 'assistant' : 'user', content: msg.content });
+  }
 
-HOW YOU TALK:
-- Like texting a knowledgeable friend - casual, warm, real
-- Short sentences. Natural flow. No corporate speak.
-- Use contractions (I'm, you're, that's, won't)
-- Occasional emojis (💎 ✨) but don't overdo it
-- NEVER say: "I understand", "Based on your requirements", "As a gemstone consultant", "I'd be happy to"
-- INSTEAD say: "Oh nice!", "Got it!", "Here's the thing...", "So basically..."
-- Ask ONE question at a time, not multiple
-- Sound genuinely interested, not scripted
+  // The current user message is already the last in history — check if we need to add it
+  const lastMsg = messages[messages.length - 1];
+  if (!lastMsg || lastMsg.role !== 'user' || lastMsg.content !== userMessage) {
+    messages.push({ role: 'user', content: userMessage });
+  }
 
-${moodInstruction}
-
-CHAT SO FAR:
-${recentHistory || 'Just started chatting.'}
-
-ABOUT THIS PERSON:
-${contextSummary || 'Still getting to know them!'}
-
-${hasGemstones ? `MATCHING GEMSTONES FOUND:
-${gemstoneInfo}
-
-Mention you found some great options and they can tap the cards below to see them!` : ''}
-
-${context.gemstoneType && GEMSTONE_KNOWLEDGE[context.gemstoneType] ? `
-YOUR KNOWLEDGE ABOUT ${context.gemstoneType.toUpperCase()}:
-${JSON.stringify(GEMSTONE_KNOWLEDGE[context.gemstoneType], null, 2)}
-Share this naturally if it helps!` : ''}
-
-THEY JUST SAID:
-"${userMessage}"
-
-YOUR RESPONSE:
-- Be conversational but helpful (2-4 sentences)
-- Sound like a real person chatting, not a bot
-- ${userName ? `Use their name "${userName}" to make it personal!` : ''}
-- ${hasGemstones ? `IMPORTANT: I found ${gemstones.length} matching gemstones! Tell them about your recommendations with some details:
-  * Briefly mention why these gems are good for them
-  * Highlight key benefits or features
-  * Let them know they can tap the cards below to see more! 👇` : ''}
-- ${!context.purpose && !context.gemstoneType && !hasGemstones ? 'Ask what they need help with - occasion, zodiac, purpose?' : ''}
-- Give specific, helpful info - not just "I found something"
-- End with something that invites them to continue
-
-Remember: Be helpful AND friendly. Give real value in every response!`;
+  return messages;
 };
 
 // ============================================
@@ -745,45 +793,54 @@ router.post('/gemstone-ai', aiRateLimit, async (req, res) => {
       }
     }
     
-    // Build prompt and get AI response
-    const prompt = buildConversationalPrompt(
+    // Build true multi-turn messages array
+    const messages = buildMessages(
       message,
       conversationData.history,
       extractedContext,
       suggestedGemstones,
       mood
     );
-    
-    // Call AI with unified function (supports Gemini, MegaLLM, OpenAI)
-    let aiResponse = await callAI(prompt);
-    
-    // Clean up response
-    aiResponse = aiResponse
-      .replace(/^\s*["']|["']\s*$/g, '') // Remove quotes
-      .replace(/\*\*/g, '') // Remove markdown bold
-      .replace(/^(Kohinoor:|Response:)/i, '') // Remove prefixes
-      .trim();
-    
-    // Fallback if empty
-    if (!aiResponse) {
+
+    // Call AI with full conversation context
+    let aiResponse = await callAIMessages(messages);
+
+    // Clean up response artifacts
+    if (aiResponse) {
+      aiResponse = aiResponse
+        .replace(/^[\s"']+|[\s"']+$/g, '')           // trim quotes
+        .replace(/\*\*(.*?)\*\*/g, '$1')              // remove **bold**
+        .replace(/^(Kohinoor:|Assistant:|Response:)/i, '') // remove role prefixes
+        .replace(/^<<INSTRUCTIONS>>[\s\S]*?\n/m, '')  // remove stray system text
+        .trim();
+    }
+
+    // Smart fallback when all AI providers fail
+    if (!aiResponse || aiResponse.length < 5) {
+      const name = extractedContext.userName;
+      const convLen = conversationData.history.length;
       if (suggestedGemstones.length > 0) {
         const gemNames = suggestedGemstones.slice(0, 2).map(g => g.name?.english || g.category).join(' and ');
-        aiResponse = extractedContext.userName 
-          ? `Hey ${extractedContext.userName}! 💎 I found some great options for you - check out ${gemNames}! These are perfect based on what you're looking for. Tap any card below to see more details, or let me know if you want something different!`
-          : `Hey! 💎 I found some beautiful gems that might be perfect for you - including ${gemNames}! Check out the options below and let me know what catches your eye. I can tell you more about any of them!`;
+        aiResponse = name
+          ? `${name}, check out ${gemNames} — they look perfect for what you need! Tap any card below for full details. 💎`
+          : `Found some beautiful options for you — ${gemNames}! Tap the cards below to explore. 💎`;
+      } else if (convLen > 2) {
+        // Mid-conversation fallback — reference what was said
+        aiResponse = name
+          ? `Sorry ${name}, I hit a small glitch! 😅 So where were we — ${extractedContext.purpose || extractedContext.occasion ? `you were looking for something for ${extractedContext.purpose || extractedContext.occasion}` : 'you wanted gemstone recommendations'}. Still on it!`
+          : `Oops, tiny glitch on my end! 😅 Still here — tell me more about what you're looking for and I'll find the perfect stone!`;
       } else {
-        const fallbacks = extractedContext.userName 
-          ? [
-              `Hey ${extractedContext.userName}! 💎 I'd love to help you find the perfect gemstone. What's the occasion - is it for yourself, a gift, or something astrological?`,
-              `${extractedContext.userName}, great to chat with you! Tell me - are you looking for something for a special occasion, or maybe based on your zodiac? I can suggest the perfect stone!`,
-              `Nice to meet you ${extractedContext.userName}! 💎 So what brings you to Kohinoor today - looking for something beautiful, powerful, or maybe both?`
-            ]
-          : [
-              "Hey! I'm Kohinoor 💎 I help people find their perfect gemstone. What are you looking for - something for a special occasion, astrology, or just treating yourself?",
-              "Hi there! 💎 Looking for something special? Tell me about your budget, occasion, or zodiac and I'll find you the perfect gem!",
-              "Hey! Welcome to Kohinoor 💎 Whether it's for love, wealth, health, or just beauty - I've got you covered. What are you interested in?"
-            ];
-        aiResponse = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+        // Fresh start fallback
+        const openers = name ? [
+          `Hey ${name}! 💎 Great to meet you — are you looking for something for a special occasion, or more for astrology?`,
+          `${name}! So what brings you to Kohinoor today — a gift, something for yourself, or an astrological reason?`,
+          `Nice to meet you ${name} 💎 Tell me — what's the occasion? I'll find you the perfect stone!`
+        ] : [
+          "Hey! I'm Kohinoor 💎 Here to help you find the perfect gemstone. What are you looking for — occasion, astrology, or just something beautiful?",
+          "Hi there! 💎 Tell me your zodiac, occasion, or budget and I'll pick the perfect gem for you!",
+          "Hey! Welcome 💎 Are you looking for something astrological, a gift, or a treat for yourself?"
+        ];
+        aiResponse = openers[Math.floor(Math.random() * openers.length)];
       }
     }
     

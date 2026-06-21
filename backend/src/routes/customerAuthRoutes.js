@@ -54,17 +54,17 @@ const authenticateCustomer = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({ success: false, message: 'Not authenticated' });
     }
-    
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded.type !== 'customer') {
       return res.status(401).json({ success: false, message: 'Invalid token type' });
     }
-    
+
     const customer = await Customer.findById(decoded.id);
     if (!customer || !customer.isActive) {
       return res.status(401).json({ success: false, message: 'Customer not found or inactive' });
     }
-    
+
     req.customer = customer;
     next();
   } catch (error) {
@@ -106,10 +106,10 @@ const loginValidation = [
 const handleValidation = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ 
-      success: false, 
+    return res.status(400).json({
+      success: false,
       message: errors.array()[0].msg,
-      errors: errors.array() 
+      errors: errors.array()
     });
   }
   next();
@@ -124,10 +124,10 @@ router.post('/check-email', async (req, res) => {
     if (!email) {
       return res.status(400).json({ success: false, message: 'Email is required' });
     }
-    
+
     const existingCustomer = await Customer.findOne({ email });
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       exists: !!existingCustomer,
       verified: existingCustomer?.isEmailVerified || false
     });
@@ -146,50 +146,45 @@ router.post('/send-otp', async (req, res) => {
     if (!email) {
       return res.status(400).json({ success: false, message: 'Email is required' });
     }
-    
+
     // Check if email already exists
     const existingCustomer = await Customer.findOne({ email });
     if (existingCustomer) {
       if (existingCustomer.isEmailVerified) {
-        return res.status(400).json({ 
-          success: false, 
+        return res.status(400).json({
+          success: false,
           exists: true,
-          message: 'This email is already registered. Please sign in.' 
+          message: 'This email is already registered. Please sign in.'
         });
       } else {
         // User exists but not verified - resend OTP
         const otp = existingCustomer.generateEmailOTP();
         await existingCustomer.save({ validateBeforeSave: false });
-        
+
         console.log(`📧 OTP for existing unverified ${email}: ${otp}`);
-        
-        // Try to send email but don't fail if it doesn't work
-        const emailResult = await sendVerificationOTP(email, existingCustomer.name || 'User', otp);
-        if (emailResult.emailFailed || emailResult.skipped) {
-          console.log(`⚠️ Email service unavailable, OTP for ${email}: ${otp}`);
-        }
-        
+
+        // Send email (with 10s timeout built into emailService)
+        await sendVerificationOTP(email, existingCustomer.name || 'User', otp);
+
         return res.json({ success: true, message: 'OTP sent successfully' });
       }
     }
-    
+
     // Generate OTP for new user - store temporarily
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = process.env.TEST_MODE === 'true'
+      ? '123456'
+      : Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpire = Date.now() + 30 * 60 * 1000; // 30 minutes (extended)
-    
+
     // Store OTP temporarily
     if (!global.pendingOTPs) global.pendingOTPs = {};
     global.pendingOTPs[email] = { otp, expire: otpExpire };
-    
+
     console.log(`📧 OTP for ${email}: ${otp}`); // For debugging/development
-    
-    // Try to send email but don't fail if it doesn't work
-    const emailResult = await sendVerificationOTP(email, 'User', otp);
-    if (emailResult.emailFailed || emailResult.skipped) {
-      console.log(`⚠️ Email service unavailable, OTP for ${email}: ${otp}`);
-      // Still return success - OTP is stored and can be entered
-    }
-    
+
+    // Send email (with 10s timeout built into emailService)
+    await sendVerificationOTP(email, 'User', otp);
+
     res.json({ success: true, message: 'OTP sent successfully' });
   } catch (error) {
     console.error('Send OTP error:', error);
@@ -206,25 +201,25 @@ router.post('/verify-otp', async (req, res) => {
     if (!email || !otp) {
       return res.status(400).json({ success: false, message: 'Email and OTP are required' });
     }
-    
+
     const pendingOTP = global.pendingOTPs?.[email];
-    
+
     if (!pendingOTP) {
       return res.status(400).json({ success: false, message: 'OTP expired. Please request a new one.' });
     }
-    
+
     if (pendingOTP.otp !== otp) {
       return res.status(400).json({ success: false, message: 'Invalid OTP. Please check and try again.' });
     }
-    
+
     if (Date.now() > pendingOTP.expire) {
       delete global.pendingOTPs[email];
       return res.status(400).json({ success: false, message: 'OTP expired. Please request a new one.' });
     }
-    
+
     // Mark OTP as verified but don't delete yet (will be deleted on final signup)
     global.pendingOTPs[email].verified = true;
-    
+
     res.json({ success: true, message: 'OTP verified successfully' });
   } catch (error) {
     console.error('Verify OTP error:', error);
@@ -242,8 +237,8 @@ router.post('/signup', async (req, res) => {
     // If checkOnly is true, just check if email exists
     if (checkOnly) {
       const existingEmail = await Customer.findOne({ email });
-      return res.json({ 
-        success: true, 
+      return res.json({
+        success: true,
         exists: !!existingEmail,
         message: existingEmail ? 'Email already registered' : 'Email available'
       });
@@ -256,7 +251,7 @@ router.post('/signup', async (req, res) => {
     // Check if email exists
     const existingEmail = await Customer.findOne({ email });
     if (existingEmail) {
-      return res.status(400).json({ success: false, message: 'This email is already registered. Please sign in or use a different email.' });
+      return res.status(409).json({ success: false, exists: true, message: 'This email is already registered. Please sign in.' });
     }
 
     // Check age (must be at least 13) - only if DOB provided
@@ -276,9 +271,9 @@ router.post('/signup', async (req, res) => {
     // Verify OTP was checked before signup
     const pendingOTP = global.pendingOTPs?.[email];
     if (!pendingOTP || !pendingOTP.verified) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please verify your email with OTP first' 
+      return res.status(400).json({
+        success: false,
+        message: 'Please verify your email with OTP first'
       });
     }
 
@@ -296,12 +291,12 @@ router.post('/signup', async (req, res) => {
     // Clean up pending OTP
     delete global.pendingOTPs[email];
 
-    // Send welcome email
+    // Send welcome email (with 10s timeout)
     await sendWelcomeEmail(email, name);
 
     // Generate token and return
     const token = generateToken(customer._id);
-    
+
     res.status(201).json({
       success: true,
       message: 'Account created successfully!',
@@ -311,7 +306,7 @@ router.post('/signup', async (req, res) => {
 
   } catch (error) {
     console.error('Signup error:', error);
-    
+
     // Handle specific MongoDB errors
     if (error.code === 11000) {
       // Check which field caused the duplicate error
@@ -321,13 +316,13 @@ router.post('/signup', async (req, res) => {
       }
       return res.status(400).json({ success: false, message: 'Account creation failed. Please try again.' });
     }
-    
+
     // Handle validation errors from Mongoose
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({ success: false, message: messages[0] });
     }
-    
+
     res.status(500).json({ success: false, message: 'Something went wrong. Please try again later.' });
   }
 });
@@ -344,7 +339,7 @@ router.post('/verify-email', async (req, res) => {
     }
 
     const customer = await Customer.findOne({ email }).select('+emailVerificationOTP +emailVerificationExpire');
-    
+
     if (!customer) {
       return res.status(404).json({ success: false, message: 'Account not found. Please sign up again.' });
     }
@@ -363,7 +358,7 @@ router.post('/verify-email', async (req, res) => {
     customer.emailVerificationExpire = undefined;
     await customer.save({ validateBeforeSave: false });
 
-    // Send welcome email
+    // Send welcome email (with 10s timeout)
     await sendWelcomeEmail(email, customer.name);
 
     // Generate token
@@ -394,7 +389,7 @@ router.post('/resend-otp', async (req, res) => {
     }
 
     const customer = await Customer.findOne({ email });
-    
+
     if (!customer) {
       return res.status(404).json({ success: false, message: 'Account not found' });
     }
@@ -406,7 +401,7 @@ router.post('/resend-otp', async (req, res) => {
     // Generate new OTP
     const otp = customer.generateEmailOTP();
     await customer.save({ validateBeforeSave: false });
-    
+
     await sendVerificationOTP(email, customer.name, otp);
 
     res.json({
@@ -428,7 +423,7 @@ router.post('/login', loginValidation, handleValidation, async (req, res) => {
     const { email, password } = req.body;
 
     const customer = await Customer.findOne({ email }).select('+password');
-    
+
     if (!customer) {
       return res.status(401).json({ success: false, message: 'No account found with this email. Please check your email or create a new account.' });
     }
@@ -447,9 +442,9 @@ router.post('/login', loginValidation, handleValidation, async (req, res) => {
       const otp = customer.generateEmailOTP();
       await customer.save({ validateBeforeSave: false });
       await sendVerificationOTP(email, customer.name, otp);
-      
-      return res.status(403).json({ 
-        success: false, 
+
+      return res.status(403).json({
+        success: false,
         message: 'Please verify your email first. A new code has been sent.',
         requiresVerification: true,
         email: customer.email
@@ -487,7 +482,7 @@ router.post('/forgot-password', async (req, res) => {
     }
 
     const customer = await Customer.findOne({ email });
-    
+
     if (!customer) {
       // Don't reveal if email exists
       return res.json({ success: true, message: 'If an account exists, a reset code will be sent.' });
@@ -496,7 +491,7 @@ router.post('/forgot-password', async (req, res) => {
     // Generate reset OTP
     const otp = customer.generatePasswordResetOTP();
     await customer.save({ validateBeforeSave: false });
-    
+
     await sendPasswordResetOTP(email, customer.name, otp);
 
     res.json({
@@ -526,7 +521,7 @@ router.post('/reset-password', async (req, res) => {
     }
 
     const customer = await Customer.findOne({ email }).select('+resetPasswordOTP +resetPasswordExpire');
-    
+
     if (!customer) {
       return res.status(404).json({ success: false, message: 'Account not found' });
     }
@@ -553,24 +548,31 @@ router.post('/reset-password', async (req, res) => {
 });
 
 // ============================================
+// LOGOUT
+// ============================================
+router.post('/logout', async (req, res) => {
+  res.json({ success: true, message: 'Logged out successfully' });
+});
+
+// ============================================
 // GET CURRENT USER (Protected)
 // ============================================
 router.get('/me', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
-    
+
     if (!token) {
       return res.status(401).json({ success: false, message: 'Not authenticated' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
+
     if (decoded.type !== 'customer') {
       return res.status(401).json({ success: false, message: 'Invalid token type' });
     }
 
     const customer = await Customer.findById(decoded.id);
-    
+
     if (!customer || !customer.isActive) {
       return res.status(401).json({ success: false, message: 'Account not found or inactive' });
     }
@@ -592,14 +594,14 @@ router.get('/me', async (req, res) => {
 router.put('/profile', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
-    
+
     if (!token) {
       return res.status(401).json({ success: false, message: 'Not authenticated' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const customer = await Customer.findById(decoded.id);
-    
+
     if (!customer) {
       return res.status(404).json({ success: false, message: 'Account not found' });
     }
@@ -635,14 +637,14 @@ router.put('/profile', async (req, res) => {
 router.post('/avatar', avatarUpload.single('image'), async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
-    
+
     if (!token) {
       return res.status(401).json({ success: false, message: 'Not authenticated' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const customer = await Customer.findById(decoded.id);
-    
+
     if (!customer) {
       return res.status(404).json({ success: false, message: 'Account not found' });
     }
@@ -654,9 +656,9 @@ router.post('/avatar', avatarUpload.single('image'), async (req, res) => {
     // Verify Cloudinary config before upload
     if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
       console.error('[Avatar] Cloudinary config missing');
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Image upload service not configured. Please contact admin.' 
+      return res.status(500).json({
+        success: false,
+        message: 'Image upload service not configured. Please contact admin.'
       });
     }
 
@@ -699,8 +701,8 @@ router.post('/avatar', avatarUpload.single('image'), async (req, res) => {
   } catch (error) {
     console.error('Avatar upload error:', error);
     // Don't expose internal error details to client
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Server is busy. Please try again later.'
     });
   }
@@ -754,21 +756,21 @@ router.get('/chat/messages', authenticateCustomer, async (req, res) => {
 router.post('/chat/send', authenticateCustomer, async (req, res) => {
   try {
     const { message } = req.body;
-    
+
     if (!message || message.trim().length === 0) {
       return res.status(400).json({ success: false, message: 'Message cannot be empty' });
     }
-    
+
     if (message.length > 1000) {
       return res.status(400).json({ success: false, message: 'Message too long (max 1000 chars)' });
     }
-    
+
     const newMessage = await Message.create({
       customer: req.customer._id,
       content: message.trim(),
       sender: 'customer'
     });
-    
+
     res.json({ success: true, message: newMessage });
   } catch (error) {
     console.error('Send message error:', error);
@@ -779,10 +781,10 @@ router.post('/chat/send', authenticateCustomer, async (req, res) => {
 // Get unread count
 router.get('/chat/unread', authenticateCustomer, async (req, res) => {
   try {
-    const count = await Message.countDocuments({ 
-      customer: req.customer._id, 
-      sender: 'admin', 
-      isRead: false 
+    const count = await Message.countDocuments({
+      customer: req.customer._id,
+      sender: 'admin',
+      isRead: false
     });
     res.json({ success: true, unreadCount: count });
   } catch (error) {
@@ -800,6 +802,143 @@ router.post('/chat/read', authenticateCustomer, async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false });
+  }
+});
+
+// ============================================
+// ADDRESS MANAGEMENT (Protected)
+// ============================================
+
+// GET all saved addresses
+router.get('/addresses', authenticateCustomer, async (req, res) => {
+  try {
+    res.json({ success: true, addresses: req.customer.addresses || [] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch addresses' });
+  }
+});
+
+// POST add new address
+router.post('/addresses', authenticateCustomer, async (req, res) => {
+  try {
+    const { label, fullName, phone, street, city, state, pincode, country, isDefault } = req.body;
+
+    if (!fullName || !phone || !street || !city || !state || !pincode) {
+      return res.status(400).json({ success: false, message: 'All address fields are required' });
+    }
+
+    const customer = req.customer;
+
+    // If setting as default, unset all others
+    if (isDefault) {
+      customer.addresses.forEach(addr => { addr.isDefault = false; });
+    }
+
+    // If first address, auto-set as default
+    const makeDefault = isDefault || customer.addresses.length === 0;
+
+    customer.addresses.push({
+      label: label || 'Home',
+      fullName, phone, street, city, state,
+      pincode, country: country || 'India',
+      isDefault: makeDefault
+    });
+
+    await customer.save();
+
+    res.json({ success: true, message: 'Address saved!', addresses: customer.addresses });
+  } catch (error) {
+    console.error('Add address error:', error);
+    res.status(500).json({ success: false, message: 'Failed to save address' });
+  }
+});
+
+// PUT update existing address
+router.put('/addresses/:addressId', authenticateCustomer, async (req, res) => {
+  try {
+    const { addressId } = req.params;
+    const { label, fullName, phone, street, city, state, pincode, country, isDefault } = req.body;
+
+    const customer = req.customer;
+    const addr = customer.addresses.id(addressId);
+
+    if (!addr) {
+      return res.status(404).json({ success: false, message: 'Address not found' });
+    }
+
+    // If setting as default, unset all others first
+    if (isDefault) {
+      customer.addresses.forEach(a => { a.isDefault = false; });
+    }
+
+    if (label !== undefined) addr.label = label;
+    if (fullName !== undefined) addr.fullName = fullName;
+    if (phone !== undefined) addr.phone = phone;
+    if (street !== undefined) addr.street = street;
+    if (city !== undefined) addr.city = city;
+    if (state !== undefined) addr.state = state;
+    if (pincode !== undefined) addr.pincode = pincode;
+    if (country !== undefined) addr.country = country;
+    if (isDefault !== undefined) addr.isDefault = isDefault;
+
+    await customer.save();
+
+    res.json({ success: true, message: 'Address updated!', addresses: customer.addresses });
+  } catch (error) {
+    console.error('Update address error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update address' });
+  }
+});
+
+// PATCH set address as default
+router.patch('/addresses/:addressId/default', authenticateCustomer, async (req, res) => {
+  try {
+    const { addressId } = req.params;
+    const customer = req.customer;
+
+    const addr = customer.addresses.id(addressId);
+    if (!addr) {
+      return res.status(404).json({ success: false, message: 'Address not found' });
+    }
+
+    // Unset all, set this one
+    customer.addresses.forEach(a => { a.isDefault = false; });
+    addr.isDefault = true;
+
+    await customer.save();
+
+    res.json({ success: true, message: 'Default address updated!', addresses: customer.addresses });
+  } catch (error) {
+    console.error('Set default address error:', error);
+    res.status(500).json({ success: false, message: 'Failed to set default address' });
+  }
+});
+
+// DELETE address
+router.delete('/addresses/:addressId', authenticateCustomer, async (req, res) => {
+  try {
+    const { addressId } = req.params;
+    const customer = req.customer;
+
+    const addrIndex = customer.addresses.findIndex(a => a._id.toString() === addressId);
+    if (addrIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Address not found' });
+    }
+
+    const wasDefault = customer.addresses[addrIndex].isDefault;
+    customer.addresses.splice(addrIndex, 1);
+
+    // If deleted address was default, make first remaining address the default
+    if (wasDefault && customer.addresses.length > 0) {
+      customer.addresses[0].isDefault = true;
+    }
+
+    await customer.save();
+
+    res.json({ success: true, message: 'Address deleted!', addresses: customer.addresses });
+  } catch (error) {
+    console.error('Delete address error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete address' });
   }
 });
 
