@@ -1,99 +1,149 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-// Create reusable transporter
-let transporter = null;
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY || 're_default_fallback_key');
 
-const getTransporter = () => {
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT) || 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_EMAIL,
-        pass: process.env.SMTP_APP_PASSWORD
-      },
-      tls: { rejectUnauthorized: false }
-    });
-  }
-  return transporter;
-};
+// Send email with Resend
 
-// Simple OTP template
+// Minimal OTP template
 const otpTemplate = (otp) => `
-<div style="font-family:Arial;max-width:400px;margin:auto;background:#1a1a1a;border-radius:12px;padding:30px;text-align:center">
-  <h1 style="color:#f59e0b;margin:0 0 20px">Kohinoor</h1>
-  <p style="color:#888;margin:0 0 15px">Your verification code:</p>
-  <div style="background:#2a2a2a;border-radius:8px;padding:20px;margin:15px 0">
-    <span style="font-size:32px;font-weight:bold;color:#f59e0b;letter-spacing:8px">${otp}</span>
-  </div>
-  <p style="color:#666;font-size:12px">Valid for 10 minutes</p>
-</div>`;
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #000000; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" max-width="500" cellpadding="0" cellspacing="0" style="max-width: 500px; background-color: #111111; border-radius: 8px; border: 1px solid #27272a;">
+          <tr>
+            <td style="padding: 40px 40px 30px; border-bottom: 1px solid #27272a;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.5px;">Kohinoor</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 30px 40px 40px;">
+              <h2 style="color: #ffffff; margin: 0 0 16px; font-size: 16px; font-weight: 500;">Verification Code</h2>
+              <p style="color: #a1a1aa; margin: 0 0 24px; font-size: 14px; line-height: 1.6;">
+                Use the following code to verify your action. This code is valid for 10 minutes.
+              </p>
+              <div style="background: #000000; border: 1px solid #27272a; border-radius: 6px; padding: 16px; text-align: center; margin-bottom: 24px;">
+                <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 28px; font-weight: 600; color: #ffffff; letter-spacing: 6px;">${otp}</span>
+              </div>
+              <p style="color: #52525b; margin: 0; font-size: 12px; line-height: 1.5;">
+                If you didn't request this code, you can safely ignore this email.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
-// Welcome template
+// Minimal Welcome template
 const welcomeTemplate = (name) => `
-<div style="font-family:Arial;max-width:500px;margin:auto;background:#1a1a1a;border-radius:12px;overflow:hidden">
-  <div style="background:linear-gradient(135deg,#f59e0b,#ea580c);padding:30px;text-align:center">
-    <h1 style="color:#fff;margin:0;font-size:28px">💎 Kohinoor Gemstone</h1>
-    <p style="color:#fff;opacity:0.9;margin:10px 0 0;font-size:14px">Trusted by tradition, chosen for quality</p>
-  </div>
-  
-  <div style="padding:30px;text-align:center">
-    <h2 style="color:#fff;margin:0 0 10px">Welcome, ${name}! 🎉</h2>
-    <p style="color:#888;margin:0 0 20px">Your account has been created successfully.</p>
-    
-    <div style="background:#2a2a2a;border-radius:8px;padding:20px;margin:20px 0;text-align:left">
-      <h3 style="color:#f59e0b;margin:0 0 15px;font-size:16px">✨ Popular Gemstones</h3>
-      <p style="color:#ccc;margin:0 0 8px;font-size:14px">💙 <strong>Neelam</strong> (Blue Sapphire) - Saturn stone for success</p>
-      <p style="color:#ccc;margin:0 0 8px;font-size:14px">💛 <strong>Pukhraj</strong> (Yellow Sapphire) - Jupiter stone for wisdom</p>
-      <p style="color:#ccc;margin:0 0 8px;font-size:14px">❤️ <strong>Ruby</strong> (Manik) - Sun stone for confidence</p>
-      <p style="color:#ccc;margin:0 0 8px;font-size:14px">💚 <strong>Emerald</strong> (Panna) - Mercury stone for intellect</p>
-      <p style="color:#ccc;margin:0;font-size:14px">🤍 <strong>Pearl</strong> (Moti) - Moon stone for peace</p>
-    </div>
-    
-    <a href="https://kohinoorgemstone.com" style="display:inline-block;background:#f59e0b;color:#000;font-weight:bold;padding:12px 30px;border-radius:8px;text-decoration:none;margin:10px 0">Explore Gemstones</a>
-    
-    <div style="margin-top:25px;padding-top:20px;border-top:1px solid #333">
-      <h4 style="color:#f59e0b;margin:0 0 10px;font-size:14px">📍 Visit Our Store</h4>
-      <p style="color:#888;margin:0;font-size:13px;line-height:1.6">
-        <strong style="color:#ccc">Kohinoor Gemstone</strong><br>
-        Shahbad, Deewan Khana, Opposite Dr. Deewedi<br>
-        Bareilly, Uttar Pradesh - 243001<br>
-        <strong style="color:#ccc">Expert:</strong> Ahad Beg
-      </p>
-    </div>
-    
-    <div style="margin-top:20px">
-      <p style="color:#666;font-size:12px;margin:0">
-        Serving customers for 2 generations with authentic gemstones
-      </p>
-    </div>
-  </div>
-</div>`;
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #000000; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" max-width="500" cellpadding="0" cellspacing="0" style="max-width: 500px; background-color: #111111; border-radius: 8px; border: 1px solid #27272a;">
+          <tr>
+            <td style="padding: 40px 40px 30px; border-bottom: 1px solid #27272a;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.5px;">Kohinoor</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 30px 40px 40px;">
+              <h2 style="color: #ffffff; margin: 0 0 16px; font-size: 16px; font-weight: 500;">Welcome, ${name}</h2>
+              <p style="color: #a1a1aa; margin: 0 0 24px; font-size: 14px; line-height: 1.6;">
+                Your account has been created successfully. Welcome to a curated collection of authentic, high-quality gemstones.
+              </p>
+              
+              <div style="margin-bottom: 32px;">
+                <h3 style="color: #ffffff; margin: 0 0 12px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Our Collection</h3>
+                <ul style="color: #a1a1aa; margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.8;">
+                  <li><strong style="color: #e4e4e7; font-weight: 500;">Neelam</strong> (Blue Sapphire)</li>
+                  <li><strong style="color: #e4e4e7; font-weight: 500;">Pukhraj</strong> (Yellow Sapphire)</li>
+                  <li><strong style="color: #e4e4e7; font-weight: 500;">Ruby</strong> (Manik)</li>
+                  <li><strong style="color: #e4e4e7; font-weight: 500;">Emerald</strong> (Panna)</li>
+                  <li><strong style="color: #e4e4e7; font-weight: 500;">Pearl</strong> (Moti)</li>
+                </ul>
+              </div>
+              
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <a href="https://kohinoorgemstone.com" style="display: inline-block; background-color: #ffffff; color: #000000; font-size: 14px; font-weight: 500; text-decoration: none; padding: 10px 24px; border-radius: 6px;">Explore Collection</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 24px 40px; background-color: #0a0a0a; border-top: 1px solid #27272a; border-radius: 0 0 8px 8px;">
+              <p style="color: #71717a; margin: 0 0 8px; font-size: 12px; font-weight: 500;">Visit Our Store</p>
+              <p style="color: #52525b; margin: 0; font-size: 12px; line-height: 1.5;">
+                Shahbad, Deewan Khana, Opposite Dr. Deewedi<br>
+                Bareilly, Uttar Pradesh - 243001<br>
+                Expert: Ahad Beg
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
-// Send email
 export const sendEmail = async (to, subject, html) => {
   try {
-    if (!process.env.SMTP_EMAIL || !process.env.SMTP_APP_PASSWORD) {
-      console.log('No SMTP config - skipping email');
+    if (!process.env.RESEND_API_KEY) {
+      console.log('No RESEND_API_KEY config - skipping email');
       return { success: true, skipped: true };
     }
 
-    const from = '"' + (process.env.FROM_NAME || 'Kohinoor') + '" <' + (process.env.FROM_EMAIL || process.env.SMTP_EMAIL) + '>';
+    const from = process.env.FROM_EMAIL || 'info@kohinoorgemstone.com';
+    const fromName = process.env.FROM_NAME || 'Kohinoor Gemstone';
+
+    // Resend requires the format "Name <email@domain.com>"
+    const fromString = `${fromName} <${from}>`;
+
     console.log('Sending email to:', to);
 
-    const info = await getTransporter().sendMail({ from, to, subject, html });
-    console.log('Email sent:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    const { data, error } = await resend.emails.send({
+      from: fromString,
+      to,
+      subject,
+      html
+    });
+
+    if (error) {
+      console.error('Resend API error:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log('Email sent successfully:', data?.id);
+    return { success: true, messageId: data?.id };
   } catch (error) {
-    console.error('Email failed:', error.message);
+    console.error('Email failed Exception:', error.message);
     return { success: false, error: error.message };
   }
 };
 
 // Send verification OTP
 export const sendVerificationOTP = async (email, name, otp) => {
-  return sendEmail(email, 'Your Kohinoor OTP: ' + otp, otpTemplate(otp));
+  return sendEmail(email, 'Your Kohinoor Verification Code', otpTemplate(otp));
 };
 
 // Send password reset OTP
