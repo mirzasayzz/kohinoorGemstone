@@ -1,154 +1,135 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 const sendEmail = async (options) => {
-  // Create transporter using Gmail SMTP
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT) || 587,
-    secure: false, // true for 465, false for other ports
-    auth: {
-      user: process.env.SMTP_EMAIL,
-      pass: process.env.SMTP_APP_PASSWORD
-    },
-    logger: true,
-    debug: true
-  });
-
-  // Email options
-  const fromAddress = `${process.env.FROM_NAME || 'Kohinoor Admin'} <${process.env.FROM_EMAIL || process.env.SMTP_EMAIL}>`;
-  const mailOptions = {
-    from: fromAddress,
-    to: options.email,
-    subject: options.subject,
-    html: options.html || options.message
-  };
-
   try {
-    console.log('[Email] Transport host:', process.env.SMTP_HOST || 'smtp.gmail.com', 'port:', parseInt(process.env.SMTP_PORT) || 587);
-    console.log('[Email] From:', fromAddress, 'To:', options.email, 'Subject:', options.subject);
-    // Verify connection configuration
-    await transporter.verify();
-    const info = await transporter.sendMail(mailOptions);
-    console.log('[Email] Sent OK. MessageId:', info.messageId);
-    return info;
+    if (!process.env.RESEND_API_KEY) {
+      console.log('[Email] No RESEND_API_KEY config - skipping email');
+      return { success: true, skipped: true };
+    }
+
+    const resend = new Resend(process.env.RESEND_API_KEY || 're_default_fallback_key');
+
+    const fromAddress = process.env.FROM_EMAIL || 'info@kohinoorgemstone.com';
+    const fromName = process.env.FROM_NAME || 'Kohinoor Admin';
+    const fromString = `${fromName} <${fromAddress}>`;
+
+    console.log('[Email] From:', fromString, 'To:', options.email, 'Subject:', options.subject);
+
+    const { data, error } = await resend.emails.send({
+      from: fromString,
+      to: options.email,
+      subject: options.subject,
+      html: options.html || options.message
+    });
+
+    if (error) {
+      console.error('[Email] Resend API error:', error);
+      throw new Error(error.message);
+    }
+
+    console.log('[Email] Sent OK. MessageId:', data?.id);
+    return data;
   } catch (err) {
-    console.error('[Email] Send failed:', err && err.message ? err.message : err);
+    console.error('[Email] Send failed:', err.message);
     throw err;
   }
 };
 
-// Password reset email template
+// Minimal Password reset email template
 export const sendPasswordResetEmail = async (email, resetUrl, userName) => {
   const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Password Reset</title>
-    </head>
-    <body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a; padding: 40px 20px;">
-        <tr>
-          <td align="center">
-            <table width="100%" max-width="500" cellpadding="0" cellspacing="0" style="max-width: 500px; background-color: #111111; border-radius: 12px; border: 1px solid #242424;">
-              <tr>
-                <td style="padding: 40px 30px; text-align: center; border-bottom: 1px solid #242424;">
-                  <div style="width: 60px; height: 60px; background: #ffffff; border-radius: 12px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
-                    <span style="font-size: 28px;">💎</span>
-                  </div>
-                  <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">Kohinoor Admin</h1>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding: 40px 30px;">
-                  <h2 style="color: #ffffff; margin: 0 0 16px; font-size: 20px; font-weight: 600;">Password Reset Request</h2>
-                  <p style="color: #a3a3a3; margin: 0 0 24px; font-size: 15px; line-height: 1.6;">
-                    Hi ${userName || 'Admin'},<br><br>
-                    We received a request to reset your password. Click the button below to create a new password.
-                  </p>
-                  <a href="${resetUrl}" style="display: inline-block; background: #ffffff; color: #0a0a0a; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;">
-                    Reset Password
-                  </a>
-                  <p style="color: #737373; margin: 24px 0 0; font-size: 13px; line-height: 1.6;">
-                    This link will expire in <strong style="color: #a3a3a3;">30 minutes</strong>.<br><br>
-                    If you didn't request this, you can safely ignore this email.
-                  </p>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding: 20px 30px; border-top: 1px solid #242424; text-align: center;">
-                  <p style="color: #525252; margin: 0; font-size: 12px;">
-                    © ${new Date().getFullYear()} Kohinoor Gemstone. All rights reserved.
-                  </p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>
-  `;
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #000000; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" max-width="500" cellpadding="0" cellspacing="0" style="max-width: 500px; background-color: #111111; border-radius: 8px; border: 1px solid #27272a;">
+          <tr>
+            <td style="padding: 40px 40px 30px; border-bottom: 1px solid #27272a;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.5px;">Kohinoor System</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 30px 40px 40px;">
+              <h2 style="color: #ffffff; margin: 0 0 16px; font-size: 16px; font-weight: 500;">Reset Password</h2>
+              <p style="color: #a1a1aa; margin: 0 0 24px; font-size: 14px; line-height: 1.6;">
+                Hi ${userName || 'Admin'},<br><br>
+                We received a request to reset your password. Click the button below to verify your identity and create a new password.
+              </p>
+              
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+                <tr>
+                  <td>
+                    <a href="${resetUrl}" style="display: inline-block; background-color: #ffffff; color: #000000; font-size: 14px; font-weight: 500; text-decoration: none; padding: 10px 24px; border-radius: 6px;">Reset Password</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="color: #52525b; margin: 0; font-size: 12px; line-height: 1.5;">
+                This link will expire in 30 minutes. If you didn't request a password reset, you can safely ignore this email.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
   await sendEmail({
     email,
-    subject: 'Password Reset - Kohinoor Admin',
+    subject: 'Action Required: Password Reset - Kohinoor',
     html
   });
 };
 
-// Password changed confirmation email
+// Minimal Password changed confirmation email
 export const sendPasswordChangedEmail = async (email, userName) => {
   const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a; padding: 40px 20px;">
-        <tr>
-          <td align="center">
-            <table width="100%" max-width="500" cellpadding="0" cellspacing="0" style="max-width: 500px; background-color: #111111; border-radius: 12px; border: 1px solid #242424;">
-              <tr>
-                <td style="padding: 40px 30px; text-align: center; border-bottom: 1px solid #242424;">
-                  <div style="width: 60px; height: 60px; background: #22c55e; border-radius: 12px; margin: 0 auto 20px;">
-                    <span style="font-size: 28px; line-height: 60px;">✓</span>
-                  </div>
-                  <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">Password Changed</h1>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding: 40px 30px;">
-                  <p style="color: #a3a3a3; margin: 0 0 16px; font-size: 15px; line-height: 1.6;">
-                    Hi ${userName || 'Admin'},<br><br>
-                    Your password has been successfully changed. You can now log in with your new password.
-                  </p>
-                  <p style="color: #737373; margin: 16px 0 0; font-size: 13px; line-height: 1.6;">
-                    If you didn't make this change, please contact support immediately.
-                  </p>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding: 20px 30px; border-top: 1px solid #242424; text-align: center;">
-                  <p style="color: #525252; margin: 0; font-size: 12px;">
-                    © ${new Date().getFullYear()} Kohinoor Gemstone. All rights reserved.
-                  </p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>
-  `;
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #000000; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" max-width="500" cellpadding="0" cellspacing="0" style="max-width: 500px; background-color: #111111; border-radius: 8px; border: 1px solid #27272a;">
+          <tr>
+            <td style="padding: 40px 40px 30px; border-bottom: 1px solid #27272a;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.5px;">Kohinoor System</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 30px 40px 40px;">
+              <h2 style="color: #ffffff; margin: 0 0 16px; font-size: 16px; font-weight: 500;">Password Changed Successfully</h2>
+              <p style="color: #a1a1aa; margin: 0 0 24px; font-size: 14px; line-height: 1.6;">
+                Hi ${userName || 'Admin'},<br><br>
+                This is a confirmation that the password for your Kohinoor Admin account was just changed. 
+                You can now log in using your new credentials.
+              </p>
+              <p style="color: #52525b; margin: 0; font-size: 12px; line-height: 1.5;">
+                If you did not make this change, please contact another administrator immediately.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
   await sendEmail({
     email,
-    subject: 'Password Changed - Kohinoor Admin',
+    subject: 'Security Notice: Password Changed - Kohinoor',
     html
   });
 };
