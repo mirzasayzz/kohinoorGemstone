@@ -2,6 +2,8 @@
 
 A modern full-stack e-commerce platform for authentic gemstones, featuring AI-powered recommendations and real-time customer support.
 
+**Live Application:** [kohinoorgemstone.com](https://www.kohinoorgemstone.com)
+
 ![Kohinoor Gemstone](https://img.shields.io/badge/Project-E--Commerce-blue) ![React](https://img.shields.io/badge/React-18.0-black) ![Node.js](https://img.shields.io/badge/Node.js-18.0-green) ![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green)
 
 ## Overview
