@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        * { font-family: 'Segoe UI', system-ui, sans-serif; }
+        
+        /* Royal Background */
+        body { background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); }
+        
+        /* White shimmer line */
+        .shimmer-line {
+            position: fixed;
+            top: 0; left: -100%;
+            width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+            animation: shimmerPass 2s ease-out forwards;
+            z-index: 100;
+        }
+        @keyframes shimmerPass { to { left: 100%; } }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f2027; }
+        ::-webkit-scrollbar-thumb { background: #d4af37; border-radius: 3px; }
+        
+        /* Sidebar */
+        .sidebar { background: linear-gradient(180deg, #0f2027, #0a1a1f); }
+        
+        /* Cards with hover */
+        .card {
+            background: rgba(15, 32, 39, 0.8);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(212, 175, 55, 0.5);
+            box-shadow: 0 20px 40px rgba(212, 175, 55, 0.1);
+        }
+        
+        /* Nav links */
+        .nav-link {
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: rgba(212, 175, 55, 0.1);
+            border-left-color: #d4af37;
+        }
+        
+        /* Gold button */
+        .btn-gold {
+            background: linear-gradient(135deg, #d4af37, #c9a227);
+            color: #0f2027;
+        }
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(212, 175, 55, 0.3);
+        }
+        
+        /* Table row hover */
+        .table-row:hover { background: rgba(212, 175, 55, 0.05); }
+        
+        /* Gold colors */
+        .text-gold { color: #d4af37; }
+        .bg-gold { background: #d4af37; }
+        .border-gold { border-color: rgba(212, 175, 55, 0.3); }
+    </style>
+</head>
+<body class="text-white min-h-screen">
+    <!-- Shimmer line -->
+    <div class="shimmer-line"></div>
+    
+    <% const activePage = 'dashboard'; %>
+    <%- include('partials/sidebar') %>
+
+    <!-- Main Content -->
+    <div class="lg:ml-64 min-h-screen">
+        <!-- Header -->
+        <header class="sticky top-0 z-30 h-16 bg-[#0f2027]/95 backdrop-blur border-b border-gold px-4">
+            <div class="h-full flex items-center justify-between">
+                <div class="flex items-center">
+                    <button onclick="toggleSidebar()" class="lg:hidden p-2 mr-3 hover:bg-white/10 rounded">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                    <div>
+                        <h1 class="text-lg font-semibold">Welcome, <%= user.name.split(' ')[0] %> 👋</h1>
+                        <p class="text-xs text-gray-400">Manage your gemstone inventory</p>
+                    </div>
+                </div>
+                <a href="<%= frontendUrl %>" target="_blank" class="btn-gold px-3 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center transition-all whitespace-nowrap">
+                    <i data-lucide="external-link" class="w-4 h-4 sm:mr-2"></i>
+                    <span class="hidden sm:inline">View Shop</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <main class="p-4 lg:p-6 space-y-6">
+            <!-- Alerts -->
+            <% if (typeof error !== 'undefined' && error) { %>
+            <div class="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center">
+                <i data-lucide="alert-circle" class="w-5 h-5 text-red-400 mr-3"></i>
+                <span class="text-red-400"><%= error %></span>
+            </div>
+            <% } %>
+            <% if (typeof success !== 'undefined' && success) { %>
+            <div class="p-4 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center">
+                <i data-lucide="check-circle" class="w-5 h-5 text-green-400 mr-3"></i>
+                <span class="text-green-400"><%= success %></span>
+            </div>
+            <% } %>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                <div class="card rounded-xl p-4 sm:p-5">
+                    <div class="flex items-center justify-between mb-2 sm:mb-3">
+                        <span class="text-xs text-gray-400">Total</span>
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-gold/20 rounded-lg flex items-center justify-center">
+                            <i data-lucide="gem" class="w-4 h-4 sm:w-5 sm:h-5 text-gold"></i>
+                        </div>
+                    </div>
+                    <p class="text-2xl sm:text-3xl font-bold"><%= stats.totalGemstones %></p>
+                    <p class="text-xs text-gray-400 mt-1">Gemstones</p>
+                </div>
+                <div class="card rounded-xl p-4 sm:p-5">
+                    <div class="flex items-center justify-between mb-2 sm:mb-3">
+                        <span class="text-xs text-gray-400">Trending</span>
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                            <i data-lucide="trending-up" class="w-4 h-4 sm:w-5 sm:h-5 text-orange-400"></i>
+                        </div>
+                    </div>
+                    <p class="text-2xl sm:text-3xl font-bold"><%= stats.trendingGemstones %></p>
+                    <p class="text-xs text-gray-400 mt-1">Hot Items</p>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-3 gap-2 sm:gap-4">
+                <a href="/admin/gemstones/add" class="card rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-center group text-center sm:text-left">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gold rounded-xl flex items-center justify-center mb-2 sm:mb-0 sm:mr-4 group-hover:scale-110 transition-transform">
+                        <i data-lucide="plus" class="w-5 h-5 sm:w-6 sm:h-6 text-black"></i>
+                    </div>
+                    <div>
+                        <p class="font-medium text-sm sm:text-base">Add</p>
+                        <p class="text-xs text-gray-400 hidden sm:block">Create gemstone</p>
+                    </div>
+                </a>
+                <a href="/admin/gemstones" class="card rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-center group text-center sm:text-left">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mb-2 sm:mb-0 sm:mr-4 group-hover:scale-110 transition-transform">
+                        <i data-lucide="list" class="w-5 h-5 sm:w-6 sm:h-6 text-blue-400"></i>
+                    </div>
+                    <div>
+                        <p class="font-medium text-sm sm:text-base">All</p>
+                        <p class="text-xs text-gray-400 hidden sm:block">All gemstones</p>
+                    </div>
+                </a>
+                <a href="/admin/business" class="card rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-center group text-center sm:text-left">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-purple-500/20 rounded-xl flex items-center justify-center mb-2 sm:mb-0 sm:mr-4 group-hover:scale-110 transition-transform">
+                        <i data-lucide="settings" class="w-5 h-5 sm:w-6 sm:h-6 text-purple-400"></i>
+                    </div>
+                    <div>
+                        <p class="font-medium text-sm sm:text-base">Settings</p>
+                        <p class="text-xs text-gray-400 hidden sm:block">Shop info</p>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Recent Gemstones -->
+            <div class="card rounded-xl p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-semibold">Recent Gemstones</h2>
+                    <a href="/admin/gemstones" class="text-xs text-gold hover:underline">View All →</a>
+                </div>
+                
+                <% if (recentGemstones && recentGemstones.length > 0) { %>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="text-left text-xs text-gray-500 border-b border-gold/20">
+                                <th class="pb-3">Name</th>
+                                <th class="pb-3 hidden sm:table-cell">Category</th>
+                                <th class="pb-3 text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <% recentGemstones.slice(0, 6).forEach(gemstone => { %>
+                            <tr class="table-row border-b border-white/5 cursor-pointer" onclick="window.location.href='/admin/gemstones/edit/<%= gemstone._id %>'">
+                                <td class="py-3">
+                                    <div class="flex items-center">
+                                        <% if (gemstone.images && gemstone.images.length > 0) { %>
+                                        <img src="<%= gemstone.images[0].url %>" class="w-8 h-8 rounded-lg object-cover mr-3">
+                                        <% } else { %>
+                                        <div class="w-8 h-8 bg-gold/20 rounded-lg flex items-center justify-center mr-3">
+                                            <i data-lucide="gem" class="w-4 h-4 text-gold"></i>
+                                        </div>
+                                        <% } %>
+                                        <span class="truncate max-w-[120px]"><%= gemstone.name.english %></span>
+                                    </div>
+                                </td>
+                                <td class="py-3 text-gray-400 hidden sm:table-cell"><%= gemstone.category %></td>
+                                <td class="py-3 text-right">
+                                    <% if (gemstone.trending) { %>
+                                    <span class="px-2 py-1 text-xs bg-orange-500/20 text-orange-400 rounded">Trending</span>
+                                    <% } else { %>
+                                    <span class="px-2 py-1 text-xs bg-green-500/20 text-green-400 rounded">Active</span>
+                                    <% } %>
+                                </td>
+                            </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+                <% } else { %>
+                <div class="text-center py-10">
+                    <div class="w-14 h-14 mx-auto mb-4 bg-gold/10 rounded-full flex items-center justify-center">
+                        <i data-lucide="gem" class="w-7 h-7 text-gold"></i>
+                    </div>
+                    <p class="text-gray-400 mb-4">No gemstones yet</p>
+                    <a href="/admin/gemstones/add" class="btn-gold inline-flex items-center px-4 py-2 rounded-lg text-sm">
+                        <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+                        Add First Gemstone
+                    </a>
+                </div>
+                <% } %>
+            </div>
+
+
+            <!-- Footer -->
+            <div class="text-center py-4 border-t border-gold/20">
+                <p class="text-gray-500 text-xs">© <%= new Date().getFullYear() %> Kohinoor Gemstone</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+            document.getElementById('overlay').classList.toggle('hidden');
+        }
+    </script>
+</body>
+</html>

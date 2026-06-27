@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            900: '#0a0a0a',
+                            800: '#111111',
+                            700: '#1a1a1a',
+                            600: '#242424',
+                            500: '#2d2d2d',
+                            400: '#3d3d3d',
+                            300: '#525252',
+                            200: '#737373',
+                            100: '#a3a3a3'
+                        },
+                        accent: '#ffffff'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    
+    <style>
+        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #3d3d3d; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #525252; }
+        .nav-item { transition: all 0.15s ease; }
+        .nav-item:hover { background: rgba(255,255,255,0.05); }
+        .nav-item.active { background: rgba(255,255,255,0.1); border-right: 2px solid #fff; }
+        .card { background: #111111; border: 1px solid #242424; border-radius: 8px; }
+        .card:hover { border-color: #3d3d3d; }
+        .btn-primary { background: #fff; color: #0a0a0a; }
+        .btn-primary:hover { background: #e5e5e5; }
+        .btn-secondary { background: #242424; color: #fff; border: 1px solid #3d3d3d; }
+        .btn-secondary:hover { background: #2d2d2d; border-color: #525252; }
+        .btn-danger { background: #dc2626; color: #fff; }
+        .btn-danger:hover { background: #b91c1c; }
+        .input-field { background: #1a1a1a; border: 1px solid #3d3d3d; color: #fff; }
+        .input-field:focus { border-color: #525252; outline: none; box-shadow: 0 0 0 2px rgba(255,255,255,0.1); }
+        .input-field::placeholder { color: #737373; }
+        .stat-card { transition: transform 0.2s ease, border-color 0.2s ease; }
+        .stat-card:hover { transform: translateY(-2px); border-color: #525252; }
+        .fade-in { animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body class="bg-dark-900 text-white min-h-screen">
+    <!-- Mobile Overlay -->
+    <div id="overlay" class="fixed inset-0 bg-black/60 z-40 lg:hidden hidden" onclick="toggleSidebar()"></div>
+    
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-dark-800 border-r border-dark-600 transform -translate-x-full lg:translate-x-0 transition-transform duration-200">
+        <!-- Logo -->
+        <div class="h-16 flex items-center justify-between px-5 border-b border-dark-600">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                    <i data-lucide="gem" class="w-5 h-5 text-dark-900"></i>
+                </div>
+                <span class="font-semibold text-lg">Kohinoor</span>
+            </div>
+            <button onclick="toggleSidebar()" class="lg:hidden p-1 hover:bg-dark-600 rounded">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        
+        <!-- Navigation -->
+        <nav class="p-3 space-y-1">
+            <div class="text-xs font-medium text-dark-200 uppercase tracking-wider px-3 py-2">Main</div>
+            
+            <a href="/admin/dashboard" class="nav-item flex items-center px-3 py-2.5 rounded-lg text-sm <%= title.includes('Dashboard') ? 'active' : 'text-dark-100 hover:text-white' %>">
+                <i data-lucide="layout-grid" class="w-5 h-5 mr-3"></i>
+                Dashboard
+            </a>
+            
+            <a href="/admin/gemstones" class="nav-item flex items-center px-3 py-2.5 rounded-lg text-sm <%= title.includes('Gemstone') ? 'active' : 'text-dark-100 hover:text-white' %>">
+                <i data-lucide="gem" class="w-5 h-5 mr-3"></i>
+                Gemstones
+            </a>
+            
+            <a href="/admin/categories" class="nav-item flex items-center px-3 py-2.5 rounded-lg text-sm <%= title.includes('Categor') ? 'active' : 'text-dark-100 hover:text-white' %>">
+                <i data-lucide="tags" class="w-5 h-5 mr-3"></i>
+                Categories
+            </a>
+            
+            <div class="text-xs font-medium text-dark-200 uppercase tracking-wider px-3 py-2 mt-6">Settings</div>
+            
+            <a href="/admin/business" class="nav-item flex items-center px-3 py-2.5 rounded-lg text-sm <%= title.includes('Business') ? 'active' : 'text-dark-100 hover:text-white' %>">
+                <i data-lucide="building-2" class="w-5 h-5 mr-3"></i>
+                Business Info
+            </a>
+        </nav>
+        
+        <!-- User Section -->
+        <div class="absolute bottom-0 left-0 right-0 p-3 border-t border-dark-600">
+            <% if (typeof user !== 'undefined') { %>
+            <div class="flex items-center justify-between px-3 py-2">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-dark-500 rounded-full flex items-center justify-center">
+                        <i data-lucide="user" class="w-4 h-4 text-dark-100"></i>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium"><%= user.name %></div>
+                        <div class="text-xs text-dark-200"><%= user.role %></div>
+                    </div>
+                </div>
+                <a href="/admin/logout" class="p-2 hover:bg-dark-600 rounded-lg text-dark-100 hover:text-red-400 transition-colors" title="Logout">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </a>
+            </div>
+            <% } %>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="lg:ml-64 min-h-screen">
+        <!-- Top Bar -->
+        <header class="sticky top-0 z-30 h-16 bg-dark-800/95 backdrop-blur border-b border-dark-600 px-4 lg:px-6">
+            <div class="h-full flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <button onclick="toggleSidebar()" class="lg:hidden p-2 hover:bg-dark-600 rounded-lg">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                    <h1 class="text-lg font-semibold"><%= title.replace(' - Kohinoor Gemstone', '') %></h1>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <% if (typeof frontendUrl !== 'undefined') { %>
+                    <a href="<%= frontendUrl %>" target="_blank" class="hidden sm:flex items-center px-3 py-1.5 text-sm text-dark-100 hover:text-white hover:bg-dark-600 rounded-lg transition-colors">
+                        <i data-lucide="external-link" class="w-4 h-4 mr-2"></i>
+                        View Site
+                    </a>
+                    <% } %>
+                    <div class="w-px h-6 bg-dark-600 hidden sm:block"></div>
+                    <% if (typeof user !== 'undefined') { %>
+                    <span class="text-sm text-dark-100 hidden sm:block"><%= user.name %></span>
+                    <% } %>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <main class="p-4 lg:p-6">
+            <!-- Alerts -->
+            <% if (typeof error !== 'undefined' && error) { %>
+            <div class="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center fade-in">
+                <i data-lucide="alert-circle" class="w-5 h-5 text-red-400 mr-3 flex-shrink-0"></i>
+                <span class="text-red-400"><%= error %></span>
+            </div>
+            <% } %>
+            
+            <% if (typeof success !== 'undefined' && success) { %>
+            <div class="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center fade-in">
+                <i data-lucide="check-circle" class="w-5 h-5 text-green-400 mr-3 flex-shrink-0"></i>
+                <span class="text-green-400"><%= success %></span>
+            </div>
+            <% } %>
+
+            <%- body %>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+        
+        // Auto-hide alerts
+        setTimeout(() => {
+            document.querySelectorAll('[class*="bg-red-500/10"], [class*="bg-green-500/10"]').forEach(el => {
+                el.style.transition = 'opacity 0.3s';
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 300);
+            });
+        }, 5000);
+    </script>
+</body>
+</html> 

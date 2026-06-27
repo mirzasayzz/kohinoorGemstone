@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        * { font-family: 'Segoe UI', system-ui, sans-serif; }
+        
+        /* Royal Background */
+        body {
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            min-height: 100vh;
+        }
+        
+        /* White shimmer line on load */
+        .shimmer-line {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+            animation: shimmerPass 2s ease-out forwards;
+        }
+        @keyframes shimmerPass {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        /* Card styling */
+        .card {
+            background: rgba(15, 32, 39, 0.9);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(212, 175, 55, 0.5);
+            box-shadow: 0 20px 40px rgba(212, 175, 55, 0.15);
+        }
+        
+        /* Input */
+        .input-box {
+            background: rgba(32, 58, 67, 0.8);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            color: #fff;
+        }
+        .input-box:focus {
+            outline: none;
+            border-color: #d4af37;
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+        }
+        
+        /* Gold button */
+        .btn-gold {
+            background: linear-gradient(135deg, #d4af37, #c9a227);
+            color: #0f2027;
+            font-weight: 600;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-gold::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+        }
+        .btn-gold:hover::after {
+            animation: btnShimmer 0.6s ease;
+        }
+        @keyframes btnShimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
+        }
+        
+        /* Gold text */
+        .text-gold { color: #d4af37; }
+        .border-gold { border-color: rgba(212, 175, 55, 0.3); }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+    <!-- Shimmer line on page load -->
+    <div class="shimmer-line"></div>
+
+    <div class="w-full max-w-sm">
+        <!-- Logo -->
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-yellow-500/30">
+                <i data-lucide="gem" class="w-8 h-8 text-white"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-gold">Kohinoor</h1>
+            <p class="text-gray-400 text-sm mt-1">Admin Panel</p>
+        </div>
+
+        <!-- Login Card -->
+        <div class="card rounded-2xl p-6">
+            <h2 class="text-lg font-semibold text-white mb-6 text-center">Sign In</h2>
+            
+            <% if (typeof error !== 'undefined' && error) { %>
+            <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center">
+                <i data-lucide="alert-circle" class="w-4 h-4 text-red-400 mr-2"></i>
+                <span class="text-red-400 text-sm"><%= error %></span>
+            </div>
+            <% } %>
+            
+            <form method="POST" action="/admin/login" class="space-y-4">
+                <div>
+                    <label class="block text-sm text-gray-300 mb-2">Email</label>
+                    <input type="email" name="email" required
+                           class="input-box w-full px-4 py-3 rounded-lg text-sm"
+                           placeholder="Enter your email">
+                </div>
+                
+                <div>
+                    <label class="block text-sm text-gray-300 mb-2">Password</label>
+                    <input type="password" name="password" required
+                           class="input-box w-full px-4 py-3 rounded-lg text-sm"
+                           placeholder="Enter your password">
+                </div>
+
+                <!-- Forgot password link -->
+                <div class="mt-2 flex justify-end">
+                    <a href="/admin/forgot-password" class="text-xs text-gray-400 hover:text-gold transition-colors">
+                        Forgot password?
+                    </a>
+                </div>
+
+                <button type="submit" class="btn-gold w-full py-3 rounded-lg text-sm flex items-center justify-center mt-4 transition-all">
+                    <i data-lucide="log-in" class="w-4 h-4 mr-2"></i>
+                    Login
+                </button>
+            </form>
+            
+            <% if (typeof frontendUrl !== 'undefined' && frontendUrl) { %>
+            <div class="mt-6 pt-4 border-t border-gold text-center">
+                <a href="<%= frontendUrl %>" class="text-gray-400 hover:text-gold text-sm flex items-center justify-center transition-colors">
+                    <i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i>
+                    Back to Website
+                </a>
+            </div>
+            <% } %>
+        </div>
+        
+        <p class="text-center text-gray-500 text-xs mt-6">
+            © <%= new Date().getFullYear() %> Kohinoor Gemstone
+        </p>
+    </div>
+    
+    <script>lucide.createIcons();</script>
+</body>
+</html> 

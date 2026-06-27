@@ -1,0 +1,52 @@
+{
+  "name": "kohinoor-gemstone-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Kohinoor Gemstone website",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "lsof -ti:3001 | xargs kill -9 2>/dev/null; nodemon src/server.js",
+    "test": "node test-api.js",
+    "test-deployment": "node test-deployment.js",
+    "test-frontend-config": "node test-frontend-config.js",
+    "check-env": "node -e \"console.log('🌍 Environment Configuration Check:'); console.log('================================'); console.log('NODE_ENV:', process.env.NODE_ENV || 'Not Set'); console.log('PORT:', process.env.PORT || 'Not Set'); console.log(''); console.log('📧 Admin Configuration:'); console.log('ADMIN_EMAIL:', process.env.ADMIN_EMAIL || 'Not Set'); console.log('ADMIN_NAME:', process.env.ADMIN_NAME || 'Not Set'); console.log(''); console.log('🗄️ Database:'); console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'Set ✅' : 'Not Set ❌'); console.log(''); console.log('🌐 Frontend URLs:'); console.log('FRONTEND_URL:', process.env.FRONTEND_URL || 'Not Set (using default)'); console.log('CORS_ORIGIN:', process.env.CORS_ORIGIN || 'Not Set'); console.log(''); console.log('☁️ Cloudinary:'); console.log('CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME ? 'Set ✅' : 'Not Set ❌');\""
+  },
+  "keywords": [
+    "gemstone",
+    "ecommerce",
+    "api",
+    "nodejs",
+    "express",
+    "mongodb"
+  ],
+  "author": "Kohinoor Gemstone Team",
+  "license": "ISC",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "axios": "^1.11.0",
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.5.0",
+    "compression": "^1.7.4",
+    "connect-mongo": "^5.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.21.0",
+    "express-rate-limit": "^7.5.1",
+    "express-session": "^1.18.2",
+    "express-validator": "^7.2.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.7.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.10.1",
+    "openai": "^6.10.0",
+    "socket.io": "^4.7.2"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1",
+    "nodemon": "^3.1.7"
+  }
+}
