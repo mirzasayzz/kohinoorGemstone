@@ -1,3 +1,7 @@
+// Load env vars FIRST so imports (e.g. the Swagger spec which reads process.env)
+// see them at module evaluation time.
+import 'dotenv/config';
+
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
@@ -20,8 +24,12 @@ import uploadRoutes from './routes/uploadRoutes.js';
 import adminRoutes from './routes/adminDashboardRoutes.js';
 import gemstoneAIRoutes from './routes/gemstoneAIRoutes.js';
 import customerAuthRoutes from './routes/customerAuthRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
+import cartRoutes from './routes/cartRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { setupDefaultAdmin, displayStartupInfo } from './utils/setupAdmin.js';
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from './config/swagger.js';
 
 // Load environment variables
 dotenv.config();
@@ -75,7 +83,8 @@ app.use(session({
 // Rate limiting (apply to API only, not admin pages or static assets)
 const apiLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '', 10) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX || '', 10) || 300,
+  max: parseInt(process.env.RATE_LIMIT_MAX || '', 10) || (process.env.NODE_ENV !== 'production' || process.env.TEST_MODE === 'true' || process.env.CI ? 100000 : 300),
+  skip: () => process.env.NODE_ENV !== 'production' || process.env.TEST_MODE === 'true' || process.env.CI === 'true',
   message: 'Too many requests from this IP, please try again later.',
   trustProxy: process.env.NODE_ENV === 'production'
 });
@@ -92,10 +101,7 @@ const allowedOrigins = [
   'https://www.kohinoorgemstone.com',
   'http://kohinoorgemstone.com',
   'http://www.kohinoorgemstone.com',
-  'https://kohinoorgemstone.vercel.app',
-  'https://kohinoor-w94f.onrender.com',
-  'https://kohinoorgemstone-06a4b66393f6.herokuapp.com',
-  process.env.FRONTEND_URL,
+    process.env.FRONTEND_URL,
   process.env.BACKEND_URL,
   process.env.FRONTEND_DEV_URL,
   process.env.FRONTEND_DEV_URL_VITE
@@ -150,9 +156,11 @@ app.use('/api', apiLimiter);
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/customer', customerAuthRoutes);
+app.use('/api/cart', cartRoutes);
 app.use('/api/gemstones', gemstoneRoutes);
 app.use('/api/business', businessRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/payment', paymentRoutes);
 app.use('/api', gemstoneAIRoutes);
 
 // Health check route
@@ -164,6 +172,29 @@ app.get('/api/health', (req, res) => {
     environment: process.env.NODE_ENV
   });
 });
+
+// Swagger API documentation - served directly at /admin/api-docs with no login
+// gate. The documented endpoints stay protected: admins authorize inside
+// Swagger via the OAuth2 password flow (email/password).
+// Registered before the production SPA catch-all so /admin/api-docs is not
+// swallowed by the React router.
+
+// Raw OpenAPI spec JSON (for tooling / clients)
+app.get('/admin/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
+// Swagger UI
+app.use('/admin/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'Kohinoor Gemstone API Docs',
+  customCss: '.swagger-ui .topbar { display: none; }',
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    docExpansion: 'list'
+  }
+}));
 
 // Handle React Router - serve index.html for all non-API, non-admin routes
 if (process.env.NODE_ENV === 'production') {
