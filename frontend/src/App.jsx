@@ -11,11 +11,12 @@ import Home from './pages/Home';
 import AllGemstones from './pages/AllGemstones';
 import GemstoneDetail from './pages/GemstoneDetail';
 import About from './pages/About';
-import Contact from './pages/Contact';
 import Wishlist from './pages/Wishlist';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import Profile from './pages/Profile';
+import Checkout from './pages/Checkout';
+import OrderSuccess from './pages/OrderSuccess';
 import { API_CONFIG } from './config/config';
 import './index.css';
 
@@ -31,45 +32,6 @@ const keepBackendAlive = () => {
 if (typeof window !== 'undefined') {
   keepBackendAlive(); // Wake up immediately on page load
   setInterval(keepBackendAlive, 10 * 60 * 1000); // Every 10 minutes
-  
-  // ========================================
-  // Copy Protection - Makes site harder to copy
-  // ========================================
-  
-  // Disable right-click context menu
-  document.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    return false;
-  });
-  
-  // Disable keyboard shortcuts for copying
-  document.addEventListener('keydown', (e) => {
-    // Disable Ctrl+S, Ctrl+U, Ctrl+C, Ctrl+Shift+I, F12
-    if (
-      (e.ctrlKey && (e.key === 's' || e.key === 'S' || e.key === 'u' || e.key === 'U')) ||
-      (e.ctrlKey && e.shiftKey && (e.key === 'i' || e.key === 'I')) ||
-      e.key === 'F12'
-    ) {
-      e.preventDefault();
-      return false;
-    }
-  });
-  
-  // Disable drag events
-  document.addEventListener('dragstart', (e) => {
-    e.preventDefault();
-    return false;
-  });
-  
-  // Console warning for DevTools
-  console.log(
-    '%c⚠️ Warning!',
-    'color: red; font-size: 40px; font-weight: bold;'
-  );
-  console.log(
-    '%cThis is protected content. Unauthorized copying or reproduction is prohibited.',
-    'color: #333; font-size: 16px;'
-  );
 }
 
 // 404 Not Found component
@@ -105,9 +67,12 @@ const AppWithProviders = () => {
                       <Route path="gemstones" element={<AllGemstones />} />
                       <Route path="gemstone/:slug" element={<GemstoneDetail />} />
                       <Route path="about" element={<About />} />
-                      <Route path="contact" element={<Contact />} />
+                      <Route path="contact" element={<Navigate to="/about" replace />} />
                       <Route path="wishlist" element={<Wishlist />} />
+                      <Route path="cart" element={<Home />} />
                       <Route path="profile" element={<Profile />} />
+                      <Route path="checkout" element={<Checkout />} />
+                      <Route path="order-success" element={<OrderSuccess />} />
                       <Route path="settings" element={<Navigate to="/profile" replace />} />
                       <Route path="*" element={<NotFound />} />
                     </Route>

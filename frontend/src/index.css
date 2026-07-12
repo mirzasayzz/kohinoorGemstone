@@ -351,45 +351,4 @@
   .dark .border-luxury-gradient {
     border-color: #262626;
   }
-
-  /* ========================================
-   * Copy Protection Styles
-   * Makes content harder to copy
-   * ======================================== */
-  
-  /* Disable text selection on protected elements */
-  .no-select,
-  .protected-content {
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
-  }
-  
-  /* Disable image dragging */
-  img {
-    -webkit-user-drag: none;
-    -khtml-user-drag: none;
-    -moz-user-drag: none;
-    -o-user-drag: none;
-    user-drag: none;
-    pointer-events: auto;
-  }
-  
-  /* Prevent image context menu on mobile */
-  img {
-    -webkit-touch-callout: none;
-  }
-  
-  /* Apply protection to main content areas */
-  .gemstone-card,
-  .hero-section,
-  .product-image,
-  .gallery-image {
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-  }
 }
