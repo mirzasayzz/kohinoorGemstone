@@ -62,11 +62,6 @@ export const CartProvider = ({ children }) => {
   // Add to cart
   const addToCart = (gemstone, quantity = 1) => {
     if (!gemstone || !gemstone._id) return false;
-    
-    // Only allow for logged-in users
-    if (!isAuthenticated) {
-      return { success: false, message: 'Please login to add items to cart' };
-    }
 
     setCartItems(prev => {
       const existingIndex = prev.findIndex(item => item._id === gemstone._id);
@@ -127,7 +122,7 @@ export const CartProvider = ({ children }) => {
   // Get cart total (estimated)
   const getCartTotal = () => {
     return cartItems.reduce((total, item) => {
-      const price = item.price || item.priceRange?.min || 0;
+      const price = item.price || item.priceRange?.min || item.pricing?.price || 2000;
       return total + (price * item.quantity);
     }, 0);
   };
