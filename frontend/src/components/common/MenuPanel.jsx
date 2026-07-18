@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { 
   User, LogOut, Heart, ShoppingCart, MessageCircle, Phone, Mail,
-  Home, Gem, Info, Contact, Moon, Sun, ChevronRight, X, UserCircle, Settings
+  Home, Gem, Info, Moon, Sun, ChevronRight, X, UserCircle, Settings
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useWishlist } from '../../context/WishlistContext';
@@ -23,8 +23,7 @@ const MenuPanel = ({ isOpen, onClose, onChatClick, onCartClick }) => {
   const navigation = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'All Gemstones', href: '/gemstones', icon: Gem },
-    { name: 'About Us', href: '/about', icon: Info },
-    { name: 'Contact', href: '/contact', icon: Contact }
+    { name: 'Our Story & Contact', href: '/about', icon: Info }
   ];
 
   const getInitials = (name) => {

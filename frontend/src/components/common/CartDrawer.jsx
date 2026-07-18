@@ -1,6 +1,6 @@
 import { Fragment } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   X, ShoppingCart, Trash2, Plus, Minus, 
   MessageCircle, ShoppingBag, Gem, ArrowRight 
@@ -21,6 +21,7 @@ const CartDrawer = () => {
     buyNowWithWhatsApp 
   } = useCart();
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   const total = getCartTotal();
 
@@ -151,6 +152,7 @@ const CartDrawer = () => {
                         <div className="flex items-center justify-between mt-2">
                           <div className="flex items-center space-x-2 bg-white dark:bg-gray-700 rounded-full p-1">
                             <button
+                              aria-label="Decrease quantity"
                               onClick={() => updateQuantity(item._id, item.quantity - 1)}
                               className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                             >
@@ -158,6 +160,7 @@ const CartDrawer = () => {
                             </button>
                             <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
                             <button
+                              aria-label="Increase quantity"
                               onClick={() => updateQuantity(item._id, item.quantity + 1)}
                               className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                             >
@@ -202,13 +205,25 @@ const CartDrawer = () => {
                   </span>
                 </div>
 
+                {/* Secure Online Checkout */}
+                <button
+                  onClick={() => {
+                    closeCart();
+                    navigate('/checkout');
+                  }}
+                  className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-neutral-900 rounded-xl font-bold flex items-center justify-center space-x-2 transition-all shadow-md shadow-amber-500/10 mb-2"
+                >
+                  <ShoppingBag className="w-4.5 h-4.5" />
+                  <span>Secure Online Checkout</span>
+                </button>
+
                 {/* Buy Now via WhatsApp */}
                 <button
                   onClick={buyNowWithWhatsApp}
-                  className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold flex items-center justify-center space-x-2 transition-colors shadow-lg shadow-green-500/30"
+                  className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold flex items-center justify-center space-x-2 transition-colors shadow-sm"
                 >
-                  <MessageCircle className="w-5 h-5" />
-                  <span>Buy Now via WhatsApp</span>
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Order / Inquire via WhatsApp</span>
                 </button>
 
                 <p className="text-xs text-center text-gray-500 mt-3">

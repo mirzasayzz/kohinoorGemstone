@@ -44,8 +44,7 @@ const Header = () => {
   const navigation = [
     { name: 'Home', href: '/' },
     { name: 'All Gemstones', href: '/gemstones' },
-    { name: 'About Us', href: '/about' },
-    { name: 'Contact', href: '/contact' }
+    { name: 'Our Story & Contact', href: '/about' }
   ];
 
   const wishlistCount = getWishlistCount();
@@ -117,18 +116,20 @@ const Header = () => {
             </motion.div>
 
             {/* Desktop Search Bar - Centered */}
-            <div className="hidden lg:flex flex-1 justify-center max-w-md xl:max-w-xl">
-              <div className="relative group w-full">
-                <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative w-full">
-                  <SearchBar 
-                    onSearch={handleSearch}
-                    placeholder="Search gemstones..."
-                    className="w-full"
-                  />
+            {location.pathname !== '/' && (
+              <div className="hidden lg:flex flex-1 justify-center max-w-md xl:max-w-xl">
+                <div className="relative group w-full">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="relative w-full">
+                    <SearchBar 
+                      onSearch={handleSearch}
+                      placeholder="Search gemstones..."
+                      className="w-full"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Desktop Navigation - Right side */}
             <div className="hidden md:flex items-center gap-4">
@@ -161,15 +162,17 @@ const Header = () => {
               {/* Action Buttons */}
               <div className="flex items-center gap-2">
               {/* Search Button for tablets */}
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={handleSearchToggle}
-                className="lg:hidden p-2.5 rounded-xl bg-white/50 dark:bg-white/10 backdrop-blur-sm text-neutral-600 dark:text-neutral-300 hover:bg-white/80 dark:hover:bg-white/20 hover:text-amber-600 transition-all duration-300 shadow-sm hover:shadow-md"
-                aria-label="Search"
-              >
-                <Search className="w-4.5 h-4.5" />
-              </motion.button>
+              {location.pathname !== '/' && (
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={handleSearchToggle}
+                  className="lg:hidden p-2.5 rounded-xl bg-white/50 dark:bg-white/10 backdrop-blur-sm text-neutral-600 dark:text-neutral-300 hover:bg-white/80 dark:hover:bg-white/20 hover:text-amber-600 transition-all duration-300 shadow-sm hover:shadow-md"
+                  aria-label="Search"
+                >
+                  <Search className="w-4.5 h-4.5" />
+                </motion.button>
+              )}
 
               {/* Wishlist Button */}
               <motion.button
@@ -252,15 +255,25 @@ const Header = () => {
 
             {/* Mobile Actions - Compact & Responsive */}
             <div className="md:hidden flex items-center gap-1 flex-shrink-0">
-              {/* Mobile Search Toggle */}
+              {/* Mobile Cart Button */}
               <motion.button
                 whileTap={{ scale: 0.9 }}
-                onClick={handleSearchToggle}
-                className="p-1.5 rounded-lg bg-white/50 dark:bg-white/10 backdrop-blur-sm text-neutral-600 dark:text-neutral-300 transition-all duration-300"
-                aria-label="Search"
+                onClick={openCart}
+                className="relative p-1.5 rounded-lg bg-white/50 dark:bg-white/10 backdrop-blur-sm text-neutral-600 dark:text-neutral-300 transition-all duration-300"
+                aria-label="Cart"
               >
-                <Search className="w-[18px] h-[18px]" />
+                <ShoppingCart className="w-[18px] h-[18px]" />
+                {cartCount > 0 && (
+                  <motion.span 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1 -right-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[9px] rounded-full min-w-[15px] h-[15px] flex items-center justify-center font-bold"
+                  >
+                    {cartCount > 99 ? '99+' : cartCount}
+                  </motion.span>
+                )}
               </motion.button>
+
 
               {/* Mobile Dark Mode - Compact Slider */}
               <button
