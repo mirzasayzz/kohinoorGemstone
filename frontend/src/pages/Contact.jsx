@@ -7,6 +7,7 @@ import {
   MessageCircle,
   ExternalLink
 } from 'lucide-react';
+import { FaWhatsapp } from 'react-icons/fa';
 import { useBusinessContext } from '../context/BusinessContext';
 import SEOHead from '../components/common/SEOHead';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -88,6 +89,13 @@ const Contact = () => {
               Visit our store, give us a call, or send us a message
             </p>
             
+            {/* Open/Closed Status */}
+            <div className="mt-4 inline-flex items-center space-x-2 px-3 py-1 bg-white/50 dark:bg-gray-800/50 rounded-full">
+              <div className={`w-2 h-2 rounded-full ${isOpen() ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-xs font-medium text-luxury-charcoal dark:text-luxury-pearl">
+                {isOpen() ? 'Open Now' : 'Currently Closed'}
+              </span>
+            </div>
           </div>
         </section>
 
@@ -106,9 +114,9 @@ const Contact = () => {
                       href={`https://wa.me/${businessInfo.contact.whatsapp.replace(/[^\d]/g, '')}?text=${encodeURIComponent("Hi! I'd like to inquire about your gemstones.")}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg transition-colors text-sm"
+                      className="flex items-center justify-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-3 py-2.5 rounded-lg transition-colors text-sm"
                     >
-                      <MessageCircle className="w-4 h-4" />
+                      <FaWhatsapp className="w-4 h-4" />
                       <span>WhatsApp</span>
                     </a>
                   )}
@@ -207,33 +215,10 @@ const Contact = () => {
                 <div className="bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden h-64 md:h-96">
                   {businessInfo?.googleMapsUrl ? (
                     <iframe
-                      src={(() => {
-                        const url = businessInfo.googleMapsUrl;
-                        // If already an embed URL, use as-is
-                        if (url.includes('embed') || url.includes('output=embed')) {
-                          return url;
-                        }
-                        // Handle shortened URLs (maps.app.goo.gl) - use address search
-                        if (url.includes('maps.app.goo.gl') || url.includes('goo.gl')) {
-                          // Use the store address for embedding instead
-                          const address = businessInfo?.address 
-                            ? `${businessInfo.address.street || ''}, ${businessInfo.address.city || ''}, ${businessInfo.address.state || ''}, ${businessInfo.address.pincode || ''}`
-                            : 'Shahbad, Bareilly, Uttar Pradesh, India';
-                          return `https://maps.google.com/maps?q=${encodeURIComponent(address)}&z=15&output=embed`;
-                        }
-                        // Extract coordinates from URL like "?q=30.155711,76.869723"
-                        const coordMatch = url.match(/[?&]q=([0-9.-]+),([0-9.-]+)/);
-                        if (coordMatch) {
-                          return `https://maps.google.com/maps?q=${coordMatch[1]},${coordMatch[2]}&z=15&output=embed`;
-                        }
-                        // Extract place name from URL
-                        const placeMatch = url.match(/place\/([^\/]+)/);
-                        if (placeMatch) {
-                          return `https://maps.google.com/maps?q=${encodeURIComponent(placeMatch[1].replace(/\+/g, ' '))}&z=15&output=embed`;
-                        }
-                        // Fallback: append output=embed
-                        return url.includes('?') ? `${url}&output=embed` : `${url}?output=embed`;
-                      })()}
+                      src={businessInfo.googleMapsUrl.includes('embed') 
+                        ? businessInfo.googleMapsUrl 
+                        : `https://www.google.com/maps/embed?pb=${businessInfo.googleMapsUrl}`
+                      }
                       width="100%"
                       height="100%"
                       style={{ border: 0 }}

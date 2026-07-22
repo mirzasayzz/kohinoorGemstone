@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import {
-  Gem,
-  Filter,
+import { 
+  Gem, 
+  Filter, 
   SlidersHorizontal,
   Grid3X3,
   List,
@@ -18,14 +18,10 @@ import GemstoneCard from '../components/gemstone/GemstoneCard';
 import SearchBar from '../components/common/SearchBar';
 import FilterPanel from '../components/common/FilterPanel';
 import { gemstoneService } from '../services/api';
-import useProtection from '../hooks/useProtection';
 
 const AllGemstones = () => {
-  // Anti-copy protection
-  useProtection('AllGemstones');
-
   const [searchParams, setSearchParams] = useSearchParams();
-
+  
   // State management
   const [gemstones, setGemstones] = useState([]);
   const [suggestions, setSuggestions] = useState([]); // Suggestions when no results
@@ -37,7 +33,7 @@ const AllGemstones = () => {
   const [hasMorePages, setHasMorePages] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-
+  
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [filters, setFilters] = useState({
@@ -69,10 +65,10 @@ const AllGemstones = () => {
     try {
       setLoadingSuggestions(true);
       setSuggestions([]);
-
+      
       // Try loading with relaxed filters (one filter at a time)
       const suggestionParams = { page: 1, limit: 8, sort: 'trending' };
-
+      
       // Priority order: category > purpose > color
       if (filters.category.length > 0) {
         // Try first category
@@ -87,9 +83,9 @@ const AllGemstones = () => {
         // No filters, just get trending/popular
         suggestionParams.trending = 'true';
       }
-
+      
       const response = await gemstoneService.getGemstones(suggestionParams);
-
+      
       if (response.success && response.data.gemstones?.length > 0) {
         setSuggestions(response.data.gemstones);
       } else {
@@ -128,21 +124,21 @@ const AllGemstones = () => {
       };
 
       const response = await gemstoneService.getGemstones(params);
-
+      
       if (response.success) {
         const newGemstones = response.data.gemstones || [];
-
+        
         if (append && page > 1) {
           setGemstones(prev => [...prev, ...newGemstones]);
         } else {
           setGemstones(newGemstones);
           window.scrollTo(0, 0);
         }
-
+        
         setTotalGemstones(response.data.total || 0);
         setCurrentPage(page);
         setHasMorePages(page < (response.data.totalPages || 1));
-
+        
         // If no results and filters are active, load suggestions
         if (newGemstones.length === 0 && getActiveFilterCount() > 0) {
           loadSuggestions();
@@ -153,7 +149,7 @@ const AllGemstones = () => {
     } catch (err) {
       console.error('Failed to load gemstones:', err);
       setError(err.message || 'Failed to load gemstones');
-
+      
       if (page === 1) {
         setGemstones([]);
         setTotalGemstones(0);
@@ -165,18 +161,18 @@ const AllGemstones = () => {
 
   const updateSearchParams = useCallback(() => {
     const params = new URLSearchParams();
-
+    
     if (searchQuery) params.set('search', searchQuery);
     if (sortBy !== 'newest') params.set('sort', sortBy);
-
+    
     filters.category.forEach(cat => params.append('category', cat));
     filters.purpose.forEach(purpose => params.append('purpose', purpose));
     filters.color.forEach(color => params.append('color', color));
-
+    
     if (filters.trending.includes('trending')) {
       params.set('trending', 'true');
     }
-
+    
     setSearchParams(params);
   }, [searchQuery, filters, sortBy, setSearchParams]);
 
@@ -221,7 +217,7 @@ const AllGemstones = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-
+      
       {/* Page Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6">
@@ -235,7 +231,7 @@ const AllGemstones = () => {
                   All Gemstones
                 </h1>
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                  {totalGemstones > 0
+                  {totalGemstones > 0 
                     ? `${totalGemstones} gemstone${totalGemstones === 1 ? '' : 's'} available`
                     : 'Discover our collection'
                   }
@@ -247,68 +243,64 @@ const AllGemstones = () => {
             <div className="hidden md:flex items-center space-x-2">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg ${viewMode === 'grid'
-                  ? 'bg-sapphire text-white'
+                className={`p-2 rounded-lg ${viewMode === 'grid' 
+                  ? 'bg-sapphire text-white' 
                   : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
+                }`}
               >
                 <Grid3X3 className="w-5 h-5" />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg ${viewMode === 'list'
-                  ? 'bg-sapphire text-white'
+                className={`p-2 rounded-lg ${viewMode === 'list' 
+                  ? 'bg-sapphire text-white' 
                   : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
+                }`}
               >
                 <List className="w-5 h-5" />
               </button>
             </div>
           </div>
 
-          {/* Search and Controls */}
-          <div className="space-y-3 sm:space-y-4">
-            {/* Search Bar */}
-            <SearchBar
-              onSearch={handleSearch}
-              placeholder="Search gemstones by name, category, or purpose..."
-              initialValue={searchQuery}
-              className="w-full"
-            />
+          {/* Search + Sort — single row on all screens */}
+          <div className="flex items-center gap-2">
+            {/* Search */}
+            <div className="flex-1">
+              <SearchBar
+                onSearch={handleSearch}
+                placeholder="Search gemstones..."
+                initialValue={searchQuery}
+                className="w-full"
+              />
+            </div>
 
-            {/* Mobile Controls Row */}
-            <div className="flex items-center justify-between space-x-3">
-              {/* Mobile Filter Button */}
-              <button
-                onClick={() => setIsFilterOpen(true)}
-                className="md:hidden flex items-center space-x-2 px-3 sm:px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-              >
-                <Filter className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Filters
+            {/* Filter button — mobile only */}
+            <button
+              onClick={() => setIsFilterOpen(true)}
+              className="md:hidden flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex-shrink-0"
+            >
+              <Filter className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              {getActiveFilterCount() > 0 && (
+                <span className="bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none">
+                  {getActiveFilterCount()}
                 </span>
-                {getActiveFilterCount() > 0 && (
-                  <span className="bg-sapphire text-white text-xs px-2 py-0.5 rounded-full">
-                    {getActiveFilterCount()}
-                  </span>
-                )}
-              </button>
+              )}
+            </button>
 
-              {/* Sort Dropdown */}
-              <div className="relative">
-                <select
-                  value={sortBy}
-                  onChange={(e) => handleSortChange(e.target.value)}
-                  className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 sm:px-4 py-2 pr-8 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-sapphire"
-                >
-                  {sortOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
-              </div>
+            {/* Sort dropdown */}
+            <div className="relative flex-shrink-0">
+              <select
+                value={sortBy}
+                onChange={(e) => handleSortChange(e.target.value)}
+                className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg pl-3 pr-7 py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
             </div>
           </div>
         </div>
@@ -317,7 +309,7 @@ const AllGemstones = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-5 sm:py-6">
         <div className="flex gap-4 sm:gap-6">
-
+          
           {/* Desktop Filter Sidebar */}
           <FilterPanel
             filters={filters}
@@ -330,7 +322,7 @@ const AllGemstones = () => {
 
           {/* Gemstones Grid */}
           <div className="flex-1">
-
+            
             {/* Active Filters Display */}
             {getActiveFilterCount() > 0 && (
               <div className="mb-5 sm:mb-6 flex flex-wrap gap-2 overflow-x-auto pb-2 mobile-scroll">
@@ -360,7 +352,7 @@ const AllGemstones = () => {
 
             {/* Loading State */}
             {loading && currentPage === 1 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                 {[...Array(15)].map((_, i) => (
                   <div key={i} className="premium-card animate-pulse">
                     <div className="aspect-square bg-gray-200 dark:bg-gray-600"></div>
@@ -396,7 +388,7 @@ const AllGemstones = () => {
                     No exact matches found
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 max-w-md mx-auto px-4">
-                    We couldn't find gemstones matching all your selected filters.
+                    We couldn't find gemstones matching all your selected filters. 
                     Try removing some filters or check out our suggestions below.
                   </p>
                   <button
@@ -419,7 +411,7 @@ const AllGemstones = () => {
                           You might like these
                         </h4>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {filters.category.length > 0
+                          {filters.category.length > 0 
                             ? `Related ${filters.category[0]} gemstones`
                             : filters.purpose.length > 0
                               ? `Gemstones for ${filters.purpose[0]}`
@@ -427,7 +419,7 @@ const AllGemstones = () => {
                         </p>
                       </div>
                     </div>
-
+                    
                     {loadingSuggestions ? (
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                         {[...Array(4)].map((_, i) => (
@@ -465,9 +457,9 @@ const AllGemstones = () => {
               /* Gemstones Grid */
               <>
                 <div className={`
-                  grid gap-4 sm:gap-6
-                  ${viewMode === 'grid'
-                    ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                  grid gap-3 sm:gap-6
+                  ${viewMode === 'grid' 
+                    ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
                     : 'grid-cols-1'
                   }
                 `}>
@@ -477,6 +469,7 @@ const AllGemstones = () => {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
+                      className="h-full flex flex-col"
                     >
                       <GemstoneCard
                         gemstone={gemstone}
