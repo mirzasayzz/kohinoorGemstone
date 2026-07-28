@@ -1,20 +1,8 @@
 // API Configuration
 // Uses VITE_API_BASE_URL from environment variables
 // In production (Docker), API is served from same origin using relative path
-
-// REQUIRED: Environment must be configured properly
-const getApiBaseUrl = () => {
-  const url = import.meta.env.VITE_API_BASE_URL;
-  // In production, require proper configuration
-  if (import.meta.env.PROD && !url) {
-    console.error('❌ FATAL: VITE_API_BASE_URL is not configured');
-    return '/api'; // Will fail to connect
-  }
-  return url || '/api';
-};
-
 export const API_CONFIG = {
-  BASE_URL: getApiBaseUrl(),
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || '/api',
   ENDPOINTS: {
     // Auth endpoints
     AUTH: {
@@ -24,7 +12,7 @@ export const API_CONFIG = {
       PROFILE: '/auth/profile',
       CHANGE_PASSWORD: '/auth/change-password'
     },
-
+    
     // Gemstone endpoints
     GEMSTONES: {
       GET_ALL: '/gemstones',
@@ -39,7 +27,7 @@ export const API_CONFIG = {
       STATS: '/gemstones/stats/overview',
       TOGGLE_TRENDING: '/gemstones'
     },
-
+    
     // Business endpoints
     BUSINESS: {
       INFO: '/business/info',
@@ -55,7 +43,7 @@ export const API_CONFIG = {
       THEME: '/business/theme',
       CERTIFICATIONS: '/business/certifications'
     },
-
+    
     // Upload endpoints
     UPLOAD: {
       SINGLE: '/upload/image',
@@ -64,7 +52,7 @@ export const API_CONFIG = {
       DELETE: '/upload/image',
       TRANSFORMATIONS: '/upload/transformations'
     },
-
+    
     // AI endpoints
     AI: {
       GEMSTONE_CHAT: '/gemstone-ai',
@@ -91,14 +79,14 @@ export const BUSINESS_INFO = {
   NAME: import.meta.env.VITE_SHOP_NAME || 'Kohinoor Gemstone',
   TAGLINE: 'Premium Gemstones for Life\'s Precious Moments',
   DESCRIPTION: 'Family-owned gemstone business offering certified natural gemstones with heritage and trust.',
-
+  
   // Contact info managed via admin dashboard - these are fallback values only
   CONTACT: {
     EMAIL: 'info@kohinoorgemstone.com',
     PHONE: '+911234567890',
     WHATSAPP: '+911234567890'
   },
-
+  
   ADDRESS: {
     FULL: '123 Gemstone Street, Jewelry District, Mumbai, Maharashtra, India',
     STREET: '123 Gemstone Street',
@@ -108,14 +96,14 @@ export const BUSINESS_INFO = {
     PINCODE: '400001',
     COUNTRY: 'India'
   },
-
+  
   SOCIAL_MEDIA: {
     FACEBOOK: 'https://facebook.com/kohinoorgemstone',
     INSTAGRAM: 'https://instagram.com/kohinoorgemstone',
     TWITTER: 'https://twitter.com/kohinoorgemstone',
     YOUTUBE: 'https://youtube.com/kohinoorgemstone'
   },
-
+  
   GOOGLE_MAPS: {
     DEFAULT_EMBED_URL: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3771.8574447892247!2d72.8310437!3d19.0544472!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTnCsDAzJzE2LjAiTiA3MsKwNDknNTEuOCJF!5e0!3m2!1sen!2sin!4v1234567890'
   }
@@ -126,26 +114,26 @@ export const APP_CONFIG = {
   NAME: 'Kohinoor Gemstone',
   VERSION: '1.0.0',
   DESCRIPTION: 'Premium Gemstone Commerce Website',
-
+  
   // Pagination
   ITEMS_PER_PAGE: {
     GEMSTONES: 12,
     ADMIN_GEMSTONES: 10
   },
-
+  
   // Image settings
   IMAGE: {
     MAX_SIZE: 10 * 1024 * 1024, // 10MB
     ALLOWED_TYPES: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
     MAX_FILES: 10
   },
-
+  
   // WhatsApp message template
   WHATSAPP: {
     MESSAGE_TEMPLATE: (gemstone, businessInfo) => {
       const shopName = businessInfo?.shopName || BUSINESS_INFO.NAME;
       const baseUrl = SITE_CONFIG.BASE_URL;
-
+      
       return `Hello ${shopName},
 
 I am interested in this gemstone:
@@ -159,7 +147,7 @@ Please provide more details and pricing information.
 Thank you!`;
     }
   },
-
+  
   // Theme colors
   COLORS: {
     SAPPHIRE: '#0F172A',
@@ -167,7 +155,7 @@ Thank you!`;
     EMERALD: '#047857',
     GOLDEN: '#FACC15'
   },
-
+  
   // Animation settings
   ANIMATIONS: {
     DURATION: {
@@ -241,22 +229,4 @@ export default {
   GEMSTONE_CATEGORIES,
   GEMSTONE_PURPOSES,
   CURRENCY_FORMAT
-};
-
-// Domain authorization check
-const ALLOWED_DOMAINS = [
-  'kohinoorgemstone.com',
-  'www.kohinoorgemstone.com',
-  'kohinoorgemstone.vercel.app',
-  'kohinoorgemstone-06a4b66393f6.herokuapp.com',
-  'localhost',
-  '127.0.0.1'
-];
-
-export const isAuthorizedDomain = () => {
-  if (typeof window === 'undefined') return true;
-  const hostname = window.location.hostname;
-  return ALLOWED_DOMAINS.some(domain =>
-    hostname === domain || hostname.endsWith('.' + domain)
-  );
 }; 
