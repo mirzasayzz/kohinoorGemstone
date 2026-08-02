@@ -8,6 +8,9 @@ FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
+# Set frontend env vars for build (API is relative since served from same origin)
+ENV VITE_API_BASE_URL=/api
+
 # Copy frontend package files
 COPY frontend/package*.json ./
 
@@ -41,8 +44,8 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy backend source
 COPY backend/ ./
 
-# Copy built frontend from builder stage
-COPY --from=frontend-builder /app/frontend/dist ./public
+# Copy built frontend from builder stage to src/public (where server.js expects it)
+COPY --from=frontend-builder /app/frontend/dist ./src/public
 
 # Set ownership to non-root user
 RUN chown -R nodejs:nodejs /app
