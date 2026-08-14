@@ -1,257 +1,299 @@
-# Kohinoor Gemstone
+<div align="center">
 
-A modern full-stack e-commerce platform for authentic gemstones, featuring AI-powered recommendations and real-time customer support.
+# 💎 Kohinoor Gemstone
 
-**Live Application:** [kohinoorgemstone.com](https://www.kohinoorgemstone.com)
+### A Production-Grade D2C Gemstone Marketplace
 
-![Kohinoor Gemstone](https://img.shields.io/badge/Project-E--Commerce-blue) ![React](https://img.shields.io/badge/React-18.0-black) ![Node.js](https://img.shields.io/badge/Node.js-18.0-green) ![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green)
+[![Live](https://img.shields.io/badge/🌐_Live_App-kohinoorgemstone.com-gold?style=for-the-badge)](https://www.kohinoorgemstone.com)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
+[![Node.js](https://img.shields.io/badge/Node.js-20-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://mongodb.com)
+[![Socket.io](https://img.shields.io/badge/Socket.io-Realtime-010101?style=for-the-badge&logo=socketdotio)](https://socket.io)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
 
-## Overview
+*Full-stack e-commerce platform with AI-powered recommendations, real-time chat, and Razorpay payments — built and deployed in production.*
 
-Kohinoor Gemstone is a comprehensive e-commerce solution built for a premium gemstone business. This project demonstrates modern web development practices including:
+</div>
 
-- Full-stack architecture with React and Node.js
-- AI integration using Google Gemini for intelligent recommendations
-- Real-time communication with Socket.io
-- Secure authentication with JWT
-- Cloud-based image storage with Cloudinary
-- Responsive design with TailwindCSS
+---
 
-## Tech Stack
+## ✨ What Makes This Project Stand Out
 
-### Frontend
-- **React 18** - Modern UI library with hooks
-- **Vite** - Fast build tool and dev server
-- **TailwindCSS** - Utility-first CSS framework
-- **Context API** - State management without Redux
-- **Axios** - HTTP client for API calls
-- **Socket.io Client** - Real-time WebSocket communication
+| Feature | Detail |
+|---------|--------|
+| 🤖 **AI Chatbot** | Google Gemini + Groq fallback — recommends gemstones by zodiac, budget, occasion & purpose |
+| 💬 **Real-Time Chat** | Socket.io authenticated rooms for live customer support |
+| 💳 **Payments** | Full Razorpay integration with webhook signature verification |
+| 🔐 **Security** | JWT + OTP email verification, AES-256 encryption, rate limiting, CORS hardening |
+| 🌍 **Bilingual** | Full English/Urdu catalog with bilingual search |
+| 🌙 **Dark Mode** | Persistent dark/light theme with system preference detection |
+| 📦 **Multi-provider AI** | Graceful LLM fallback: Gemini → Groq → DeepSeek |
+| 🐳 **DevOps** | Docker + docker-compose, Heroku-ready, GitHub Actions CI/CD |
 
-### Backend
-- **Node.js** - JavaScript runtime
-- **Express.js** - Web application framework
-- **MongoDB** - NoSQL database with Mongoose ODM
-- **Socket.io** - Real-time bidirectional communication
-- **JWT** - JSON Web Tokens for authentication
-- **Nodemailer** - Email service integration
-- **Cloudinary** - Cloud image management
+---
 
-### AI & Services
-- **Google Gemini AI** - AI-powered gemstone recommendations
-- **Cloudinary** - Image upload and optimization
-- **MongoDB Atlas** - Cloud database hosting
+## 🚀 Live Application
 
-## Key Features
+> **[kohinoorgemstone.com](https://www.kohinoorgemstone.com)** — Deployed and live in production
 
-### Customer Experience
-- **Product Catalog** - Browse gemstones with advanced filtering by category, purpose, and color
-- **AI Assistant** - Intelligent gemstone recommendations powered by Google Gemini
-- **Real-time Chat** - Live customer support with instant messaging
-- **Shopping Cart** - Add items to cart with quantity management
-- **Wishlist** - Save favorite gemstones for later
-- **Search** - Quick search by name (English and Urdu)
-- **Authentication** - Secure signup with email verification
-- **Dark/Light Mode** - Toggle between themes
-- **Mobile Responsive** - Optimized for all screen sizes
+- **Frontend:** Vercel (React + Vite)
+- **Backend:** Render (Node.js + Express)
+- **Database:** MongoDB Atlas
+- **Media CDN:** Cloudinary
 
-### Admin Dashboard
-- **Product Management** - Add, edit, and delete gemstones
-- **Image Upload** - Multiple image uploads with Cloudinary
-- **User Management** - View and manage customer accounts
-- **Chat Management** - Respond to customer inquiries
-- **Business Settings** - Configure shop information and contact details
-- **Analytics** - View product views and engagement metrics
+---
 
-## Project Structure
+## 🏗️ Architecture
 
 ```
 kohinoorGemstone/
-├── backend/
-│   ├── src/
-│   │   ├── config/          # Database configuration
-│   │   ├── controllers/     # Business logic handlers
-│   │   ├── middleware/      # Express middleware (auth, error handling)
-│   │   ├── models/          # Mongoose schemas (User, Gemstone, Customer)
-│   │   ├── routes/          # API endpoints
-│   │   ├── services/        # External services (email, socket)
-│   │   ├── views/           # EJS templates for admin panel
-│   │   └── server.js        # Application entry point
-│   ├── package.json
-│   └── .env.example
-├── frontend/
-│   ├── src/
-│   │   ├── components/      # Reusable React components
-│   │   │   ├── auth/        # Authentication components
-│   │   │   ├── common/      # Shared components (Header, Footer, etc.)
-│   │   │   ├── gemstone/    # Gemstone-specific components
-│   │   │   └── layout/      # Layout components
-│   │   ├── context/         # React Context providers
-│   │   ├── pages/           # Route pages (Home, Shop, Profile, etc.)
-│   │   ├── services/        # API service layer
-│   │   ├── config/          # Configuration files
-│   │   ├── App.jsx          # Main app component
-│   │   └── main.jsx         # React entry point
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── tailwind.config.js
-│   └── .env.example
-├── Dockerfile
-├── docker-compose.yml
-└── README.md
+├── frontend/                  # React 18 + Vite + TailwindCSS
+│   └── src/
+│       ├── components/        # Reusable UI components
+│       │   ├── auth/          # Login, Register, OTP verification
+│       │   ├── common/        # Header, Footer, Navbar, ThemeToggle
+│       │   ├── gemstone/      # ProductCard, GemstoneFilter, AIChat
+│       │   └── layout/        # PageWrapper, AdminLayout
+│       ├── context/           # AuthContext, CartContext, ThemeContext
+│       ├── pages/             # Home, Shop, Product, Cart, Checkout, Profile
+│       └── services/          # Axios API client, Socket.io client
+│
+├── backend/                   # Node.js + Express
+│   └── src/
+│       ├── models/            # User, Gemstone, Order, Cart, Chat (Mongoose)
+│       ├── routes/            # /api/gemstones, /api/customer, /api/admin, /api/ai
+│       ├── controllers/       # Business logic for each domain
+│       ├── middleware/        # JWT auth, admin guard, Multer, error handler
+│       ├── services/          # Email (Resend), Socket.io, AI agent router
+│       ├── views/             # EJS admin dashboard templates
+│       └── utils/             # AES encryption, helpers, validators
+│
+├── .github/workflows/         # GitHub Actions CI/CD pipeline
+├── Dockerfile                 # Multi-stage production build
+├── docker-compose.yml         # Full stack orchestration
+└── ARCHITECTURE.md            # Deep-dive technical documentation
 ```
 
-## Installation
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+| Technology | Purpose |
+|-----------|---------|
+| **React 18** | UI library with hooks and Context API |
+| **Vite** | Lightning-fast build tool and dev server |
+| **TailwindCSS** | Utility-first responsive styling |
+| **React Router v6** | Client-side routing with protected routes |
+| **Socket.io Client** | Real-time bidirectional communication |
+| **Axios** | HTTP client with interceptors for auth tokens |
+
+### Backend
+| Technology | Purpose |
+|-----------|---------|
+| **Node.js 20 + Express** | REST API and WebSocket server |
+| **MongoDB + Mongoose** | NoSQL database with schema validation |
+| **JWT** | Stateless authentication |
+| **Resend API** | Transactional OTP email delivery |
+| **Razorpay** | Payment gateway with webhook verification |
+| **Cloudinary + Multer** | Image upload, storage and optimization |
+| **Google Gemini AI** | AI-powered gemstone recommendation engine |
+| **Groq + DeepSeek** | Fallback LLM providers for AI resilience |
+| **Socket.io** | Real-time customer support chat |
+| **Swagger / OpenAPI** | Auto-generated interactive API docs |
+
+---
+
+## 🎯 Features
+
+### 🛒 Customer Experience
+- **Bilingual Catalog** — Browse gemstones in English and Urdu with dual-language search
+- **Advanced Filtering** — Filter by category, purpose, color, price range, certification
+- **AI Gemstone Advisor** — Chat with an AI that recommends stones by zodiac sign, budget, occasion, and intent
+- **Real-Time Support** — Instant live chat with the shop admin via Socket.io
+- **Cart & Checkout** — Full cart management, address saving, Razorpay payment, COD option
+- **Wishlist** — Save products for later across sessions
+- **OTP Auth** — Email-verified signup with Resend API
+- **Dark / Light Mode** — System-aware theme with manual toggle
+
+### 🔧 Admin Dashboard
+- **Product Management** — Full CRUD for gemstone listings with multi-image upload
+- **Order Management** — Track and update order statuses
+- **Chat Console** — Reply to real-time customer inquiries from a unified dashboard
+- **User Management** — View and manage customer accounts
+- **Analytics** — Product views, engagement metrics
+- **Swagger Docs** — Admin-gated `/admin/api-docs` with live API exploration
+
+---
+
+## ⚡ Getting Started
 
 ### Prerequisites
-- Node.js 18 or higher
-- MongoDB (local or Atlas account)
+- Node.js 20+
+- MongoDB (local or Atlas)
 - Cloudinary account
 - Google Gemini API key
-- Git
+- Razorpay test keys
 
 ### Backend Setup
 
-1. Navigate to backend directory:
 ```bash
 cd backend
-```
-
-2. Install dependencies:
-```bash
 npm install
-```
-
-3. Create environment file:
-```bash
 cp .env.example .env
-```
-
-4. Configure environment variables:
-```env
-NODE_ENV=development
-PORT=5000
-MONGODB_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-GEMINI_API_KEY=your_gemini_api_key
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_app_password
-FRONTEND_URL=http://localhost:5173
-```
-
-5. Start development server:
-```bash
+# Fill in your credentials in .env
 npm run dev
 ```
 
 ### Frontend Setup
 
-1. Navigate to frontend directory:
 ```bash
 cd frontend
-```
-
-2. Install dependencies:
-```bash
 npm install
-```
-
-3. Create environment file:
-```bash
 cp .env.example .env
+# Set VITE_API_BASE_URL and VITE_SOCKET_URL
+npm run dev
 ```
 
-4. Configure environment variables:
+### Access
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:5000/api |
+| Admin Panel | http://localhost:5000/admin |
+| API Docs (Swagger) | http://localhost:5000/admin/api-docs |
+
+---
+
+## 🔑 Environment Variables
+
+### Backend (`backend/.env`)
+
+```env
+NODE_ENV=development
+PORT=5000
+MONGODB_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret_key
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+GEMINI_API_KEY=your_gemini_api_key
+GROQ_API_KEY=your_groq_api_key
+RESEND_API_KEY=your_resend_api_key
+RAZORPAY_KEY_ID=your_razorpay_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_secret
+FRONTEND_URL=http://localhost:5173
+```
+
+### Frontend (`frontend/.env`)
+
 ```env
 VITE_API_BASE_URL=http://localhost:5000/api
 VITE_SOCKET_URL=http://localhost:5000
 ```
 
-5. Start development server:
+---
+
+## 🐳 Docker
+
 ```bash
-npm run dev
+# Full stack with one command
+docker-compose up -d
 ```
 
-### Access the Application
-
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:5000/api
-- Admin Panel: http://localhost:5000/admin
-
-## Deployment
-
-### Frontend (Vercel)
-
-1. Install Vercel CLI:
-```bash
-npm i -g vercel
-```
-
-2. Deploy from frontend directory:
-```bash
-cd frontend
-vercel
-```
-
-3. Set environment variables in Vercel dashboard:
-   - `VITE_API_BASE_URL` = Your deployed backend URL
-   - `VITE_SOCKET_URL` = Your deployed backend URL
-
-### Backend (Render)
-
-1. Create a new Web Service on Render
-2. Connect your GitHub repository
-3. Configure build settings:
-   - Build Command: `npm install`
-   - Start Command: `npm start`
-4. Add environment variables from your backend `.env` file
-5. Deploy
-
-### Database (MongoDB Atlas)
-
-1. Create a free cluster on MongoDB Atlas
-2. Create a database user with read/write permissions
-3. Whitelist IP addresses (use 0.0.0.0/0 for all IPs)
-4. Get the connection string and add to backend environment variables
-
-## API Endpoints
-
-### Authentication
-- `POST /api/customer/signup` - Register new customer
-- `POST /api/customer/verify-email` - Verify email with OTP
-- `POST /api/customer/signin` - Customer login
-- `POST /api/auth/login` - Admin login
-
-### Gemstones
-- `GET /api/gemstones` - Get all gemstones with filters
-- `GET /api/gemstones/trending` - Get trending gemstones
-- `GET /api/gemstones/:id` - Get single gemstone details
-- `POST /api/gemstones` - Create gemstone (admin only)
-
-### AI Features
-- `POST /api/gemstone-ai/chat` - Chat with AI assistant
-- `GET /api/gemstone-ai/suggestions` - Get AI recommendations
-
-### Chat
-- `GET /api/customer/chat/messages` - Get chat history
-- `POST /api/customer/chat/send` - Send message
-
-## Developer
-
-**Tuba Mirza** - Full Stack Developer
-
-- Portfolio: [tubamirza.vercel.app](https://tubamirza.vercel.app/)
-- GitHub: [@mirzasayzz](https://github.com/mirzasayzz)
-- Email: tubamirza822@gmail.com
-
-## License
-
-This project is shared for portfolio demonstration purposes only. Unauthorized commercial use is prohibited.
+See [DOCKER_DEPLOYMENT.md](./DOCKER_DEPLOYMENT.md) for production Docker setup and [HEROKU_DEPLOYMENT.md](./HEROKU_DEPLOYMENT.md) for Heroku deployment.
 
 ---
 
-Built with ❤️ by Tuba Mirza
+## 📡 API Endpoints
+
+### Authentication
+```
+POST   /api/customer/signup          Register with OTP verification
+POST   /api/customer/verify-email    Verify OTP
+POST   /api/customer/signin          Customer login
+POST   /api/auth/login               Admin login
+```
+
+### Gemstones
+```
+GET    /api/gemstones                List with filters & pagination
+GET    /api/gemstones/trending       Trending gemstones
+GET    /api/gemstones/:id            Single product detail
+POST   /api/gemstones                Create (admin)
+PUT    /api/gemstones/:id            Update (admin)
+DELETE /api/gemstones/:id            Delete (admin)
+```
+
+### Cart & Orders
+```
+GET    /api/cart                     Get user cart
+POST   /api/cart/add                 Add to cart
+PUT    /api/cart/update              Update quantity
+POST   /api/orders                   Place order (Razorpay)
+POST   /api/orders/verify            Verify payment webhook
+```
+
+### AI & Chat
+```
+POST   /api/gemstone-ai/chat         Chat with AI advisor
+GET    /api/gemstone-ai/suggestions  Personalized recommendations
+GET    /api/customer/chat/messages   Get chat history
+POST   /api/customer/chat/send       Send customer message
+```
+
+> 📖 Full interactive docs available at `/admin/api-docs` (Swagger/OpenAPI)
+
+---
+
+## 🔒 Security Highlights
+
+- **JWT** authentication with secure HttpOnly cookie option
+- **OTP email verification** via Resend (time-limited, single-use)
+- **AES-256 encryption** for sensitive API credentials
+- **HMAC signature verification** for Razorpay webhooks
+- **Rate limiting** on all authentication endpoints
+- **Input sanitization** and XSS prevention
+- **CORS** strict configuration per environment
+
+---
+
+## 🗂️ Deep-Dive Docs
+
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — System design, data models, and API design decisions
+- [DOCKER_DEPLOYMENT.md](./DOCKER_DEPLOYMENT.md) — Container deployment guide
+- [HEROKU_DEPLOYMENT.md](./HEROKU_DEPLOYMENT.md) — Heroku platform deployment
+
+---
+
+## 👩‍💻 About the Developer
+
+<div align="center">
+
+**Tuba Mirza** — Full Stack Developer
+
+[![Portfolio](https://img.shields.io/badge/🌐_Portfolio-tubamirza.vercel.app-blueviolet?style=flat-square)](https://tubamirza.vercel.app/)
+[![GitHub](https://img.shields.io/badge/GitHub-@mirzasayzz-181717?style=flat-square&logo=github)](https://github.com/mirzasayzz)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Tuba_Mirza-0A66C2?style=flat-square&logo=linkedin)](https://linkedin.com/in/tubamirza)
+[![Email](https://img.shields.io/badge/Email-tubamirza822@gmail.com-EA4335?style=flat-square&logo=gmail)](mailto:tubamirza822@gmail.com)
+
+*Passionate about building real-world full-stack applications with modern web technologies.*
+
+</div>
+
+---
+
+## 📄 License
+
+This project is shared for portfolio demonstration purposes. All rights reserved — unauthorized commercial use is prohibited.
+
+---
+
+<div align="center">
+
+Built with ❤️ by **Tuba Mirza**
+
+*If you found this project interesting, feel free to ⭐ star it!*
+
+</div>
