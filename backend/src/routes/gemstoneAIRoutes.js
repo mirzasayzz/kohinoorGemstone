@@ -63,7 +63,7 @@ const callAIMessages = async (messages) => {
   }
 
   // Tier 1 & 2: Groq — OpenAI-compatible, uses messages[] natively
-  const groqKey = process.env.GROQ_API_KEY || 'REDACTED_GROQ_KEY';
+  const groqKey = process.env.GROQ_API_KEY;
   const groqModels = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
   for (const model of groqModels) {
     try {
