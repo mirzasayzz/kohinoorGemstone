@@ -1,0 +1,9 @@
+export { BasePage } from './BasePage';
+export { HomePage } from './HomePage';
+export { LoginPage } from './LoginPage';
+export { RegisterPage } from './RegisterPage';
+export { ProductPage } from './ProductPage';
+export { CartPage } from './CartPage';
+export { CheckoutPage } from './CheckoutPage';
+export { ProfilePage } from './ProfilePage';
+export { WishlistPage } from './WishlistPage';
