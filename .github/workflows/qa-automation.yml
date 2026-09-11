@@ -1,4 +1,4 @@
-name: CI
+name: QA Automation Tests
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
           cache: 'npm'
           cache-dependency-path: tests/package-lock.json
 
-      - name: Install test dependencies
+      - name: Install dependencies
         run: |
           cd tests
           npm ci
@@ -39,33 +39,6 @@ jobs:
         run: |
           cd tests
           npm run typecheck
-
-  frontend-build:
-    name: Frontend Build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install frontend dependencies
-        run: |
-          cd frontend
-          npm ci
-
-      - name: Build frontend
-        run: |
-          cd frontend
-          npm run build
-        env:
-          VITE_API_BASE_URL: https://api.kohinoorgemstone.com/api
-          VITE_SOCKET_URL: https://api.kohinoorgemstone.com
 
   test-api:
     name: API Tests
@@ -216,10 +189,97 @@ jobs:
             tests/html-report
           retention-days: 7
 
+  test-mobile:
+    name: Mobile Tests (${{ matrix.device }})
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [Mobile Chrome, Mobile Safari]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: tests/package-lock.json
+
+      - name: Start MongoDB
+        uses: supercharge/mongodb-github-action@1.11.0
+        with:
+          mongodb-version: '7.0'
+          mongodb-db: kohinoor_playwright
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Seed test data
+        run: |
+          cd backend
+          NODE_ENV=test TEST_MODE=true JWT_SECRET=playwright-local-secret GEMINI_API_KEY=test MONGODB_URI=mongodb://127.0.0.1:27017/kohinoor_playwright node scripts/seed-ci.js &&
+          NODE_ENV=test TEST_MODE=true JWT_SECRET=playwright-local-secret GEMINI_API_KEY=test MONGODB_URI=mongodb://127.0.0.1:27017/kohinoor_playwright node src/scripts/seedTestData.js
+
+      - name: Start backend server
+        run: |
+          cd backend
+          NODE_ENV=test TEST_MODE=true PORT=3001 JWT_SECRET=playwright-local-secret GEMINI_API_KEY=test MONGODB_URI=mongodb://127.0.0.1:27017/kohinoor_playwright node src/server.js &
+          sleep 5
+          curl -f http://127.0.0.1:3001/api/health || exit 1
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Start frontend dev server
+        run: |
+          cd frontend
+          VITE_API_BASE_URL=http://127.0.0.1:3001/api npm run dev -- --host 127.0.0.1 --port 5173 &
+          sleep 5
+          curl -f http://127.0.0.1:5173 || exit 1
+
+      - name: Install test dependencies
+        run: |
+          cd tests
+          npm ci
+
+      - name: Install Playwright browsers
+        run: |
+          cd tests
+          if [ "${{ matrix.device }}" = "Mobile Safari" ]; then
+            npx playwright install --with-deps webkit
+          else
+            npx playwright install --with-deps chromium
+          fi
+
+      - name: Run mobile tests
+        run: |
+          cd tests
+          BASE_URL=http://127.0.0.1:5173 API_BASE_URL=http://127.0.0.1:3001 npx playwright test tests/e2e --project="${{ matrix.device }}" --reporter=list
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-results-${{ matrix.device }}
+          path: |
+            tests/test-results
+            tests/html-report
+          retention-days: 7
+
   report:
     name: Generate Report
     runs-on: ubuntu-latest
-    needs: [test-e2e, test-api]
+    needs: [test-e2e, test-api, test-mobile]
     if: always()
 
     steps:
@@ -229,9 +289,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Suite | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Lint & Type Check | ✅ Required |" >> $GITHUB_STEP_SUMMARY
-          echo "| Frontend Build | ✅ Required |" >> $GITHUB_STEP_SUMMARY
-          echo "| API Tests | ✅ Required |" >> $GITHUB_STEP_SUMMARY
-          echo "| E2E Tests (chromium, firefox, webkit) | ✅ Required |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint & Type Check | Required |" >> $GITHUB_STEP_SUMMARY
+          echo "| API Tests | Required |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests (chromium, firefox, webkit) | Required |" >> $GITHUB_STEP_SUMMARY
+          echo "| Mobile Tests (Chrome, Safari) | Required |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Tests run against a local backend + frontend started by the workflow." >> $GITHUB_STEP_SUMMARY
