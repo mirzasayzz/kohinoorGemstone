@@ -11,10 +11,9 @@ env:
   NODE_VERSION: '20'
 
 jobs:
-  backend-check:
-    name: Backend - Install & Lint
+  lint-and-typecheck:
+    name: Lint & Type Check
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,24 +23,26 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: tests/package-lock.json
 
-      - name: Install backend dependencies
+      - name: Install test dependencies
         run: |
-          cd backend
+          cd tests
           npm ci
 
-      - name: Check backend starts (syntax check)
+      - name: Run ESLint
         run: |
-          cd backend
-          node --check src/server.js
-        env:
-          NODE_ENV: test
+          cd tests
+          npm run lint
+
+      - name: Run TypeScript check
+        run: |
+          cd tests
+          npm run typecheck
 
   frontend-build:
-    name: Frontend - Install & Build
+    name: Frontend Build
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -66,18 +67,171 @@ jobs:
           VITE_API_BASE_URL: https://api.kohinoorgemstone.com/api
           VITE_SOCKET_URL: https://api.kohinoorgemstone.com
 
-  summary:
-    name: CI Summary
+  test-api:
+    name: API Tests
     runs-on: ubuntu-latest
-    needs: [backend-check, frontend-build]
+    needs: lint-and-typecheck
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: tests/package-lock.json
+
+      - name: Start MongoDB
+        uses: supercharge/mongodb-github-action@1.11.0
+        with:
+          mongodb-version: '7.0'
+          mongodb-db: kohinoor_playwright
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Seed test data
+        run: |
+          cd backend
+          NODE_ENV=test TEST_MODE=true JWT_SECRET=playwright-local-secret GEMINI_API_KEY=test MONGODB_URI=mongodb://127.0.0.1:27017/kohinoor_playwright node scripts/seed-ci.js &&
+          NODE_ENV=test TEST_MODE=true JWT_SECRET=playwright-local-secret GEMINI_API_KEY=test MONGODB_URI=mongodb://127.0.0.1:27017/kohinoor_playwright node src/scripts/seedTestData.js
+
+      - name: Start backend server
+        run: |
+          cd backend
+          NODE_ENV=test TEST_MODE=true PORT=3001 JWT_SECRET=playwright-local-secret GEMINI_API_KEY=test MONGODB_URI=mongodb://127.0.0.1:27017/kohinoor_playwright node src/server.js &
+          sleep 5
+          curl -f http://127.0.0.1:3001/api/health || exit 1
+
+      - name: Install test dependencies
+        run: |
+          cd tests
+          npm ci
+
+      - name: Install Playwright browsers
+        run: |
+          cd tests
+          npx playwright install --with-deps chromium
+
+      - name: Run API tests
+        run: |
+          cd tests
+          API_BASE_URL=http://127.0.0.1:3001 npx playwright test tests/api --project=api --reporter=list
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-results
+          path: |
+            tests/test-results
+            tests/html-report
+          retention-days: 7
+
+  test-e2e:
+    name: E2E Tests (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    timeout-minutes: 45
+
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: tests/package-lock.json
+
+      - name: Start MongoDB
+        uses: supercharge/mongodb-github-action@1.11.0
+        with:
+          mongodb-version: '7.0'
+          mongodb-db: kohinoor_playwright
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Seed test data
+        run: |
+          cd backend
+          NODE_ENV=test TEST_MODE=true JWT_SECRET=playwright-local-secret GEMINI_API_KEY=test MONGODB_URI=mongodb://127.0.0.1:27017/kohinoor_playwright node scripts/seed-ci.js &&
+          NODE_ENV=test TEST_MODE=true JWT_SECRET=playwright-local-secret GEMINI_API_KEY=test MONGODB_URI=mongodb://127.0.0.1:27017/kohinoor_playwright node src/scripts/seedTestData.js
+
+      - name: Start backend server
+        run: |
+          cd backend
+          NODE_ENV=test TEST_MODE=true PORT=3001 JWT_SECRET=playwright-local-secret GEMINI_API_KEY=test MONGODB_URI=mongodb://127.0.0.1:27017/kohinoor_playwright node src/server.js &
+          sleep 5
+          curl -f http://127.0.0.1:3001/api/health || exit 1
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Start frontend dev server
+        run: |
+          cd frontend
+          VITE_API_BASE_URL=http://127.0.0.1:3001/api npm run dev -- --host 127.0.0.1 --port 5173 &
+          sleep 5
+          curl -f http://127.0.0.1:5173 || exit 1
+
+      - name: Install test dependencies
+        run: |
+          cd tests
+          npm ci
+
+      - name: Install Playwright browsers
+        run: |
+          cd tests
+          npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Run E2E tests
+        run: |
+          cd tests
+          BASE_URL=http://127.0.0.1:5173 API_BASE_URL=http://127.0.0.1:3001 npx playwright test tests/e2e --project=${{ matrix.browser }} --reporter=list
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-${{ matrix.browser }}
+          path: |
+            tests/test-results
+            tests/html-report
+          retention-days: 7
+
+  report:
+    name: Generate Report
+    runs-on: ubuntu-latest
+    needs: [test-e2e, test-api]
     if: always()
 
     steps:
-      - name: Report status
+      - name: Generate test summary
         run: |
-          echo "## CI Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "## QA Automation Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "| Suite | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Backend Install & Syntax Check | ✅ |" >> $GITHUB_STEP_SUMMARY
-          echo "| Frontend Build | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint & Type Check | ✅ Required |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Build | ✅ Required |" >> $GITHUB_STEP_SUMMARY
+          echo "| API Tests | ✅ Required |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests (chromium, firefox, webkit) | ✅ Required |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Tests run against a local backend + frontend started by the workflow." >> $GITHUB_STEP_SUMMARY
